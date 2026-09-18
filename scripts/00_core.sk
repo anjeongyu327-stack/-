@@ -1,0 +1,140 @@
+########################################################################
+# 00_core.sk — 공통 초기화 / 닉네임(칭호+레벨) 표시 / 공용 유틸 함수
+#
+# 필요 애드온: 없음 (순수 Skript 2.16.2 vanilla 문법만 사용)
+#
+# 사용하는 전역/유저 변수 (저장 구조: {stats::%player%::*})
+#   {stats::%player%::level}        - 커스텀 레벨 (기본 1)
+#   {stats::%player%::exp}          - 현재 레벨 경험치
+#   {stats::%player%::gold}         - 보유 골드
+#   {stats::%player%::totalgold}    - 누적 획득 골드 (칭호용)
+#   {stats::%player%::job}          - 현재 직업 (없으면 "")
+#   {stats::%player%::karma}        - 카르마 (0~10)
+#   {stats::%player%::team}         - "RED" / "BLUE" / "NONE"
+#   {stats::%player%::activetitle}  - 장착중인 칭호 (없으면 "")
+#   {stats::%player%::joined}       - 최초 접속 여부(true/false)
+#
+# 이 파일이 거는 훅:
+#   on join / on quit / on join(최초접속 판정)
+#   함수: updateDisplayName(player), grantTitle(player, text), addGold(player, number)
+#         hasTitle(player, text), colorForRank(text)
+#
+# 다른 파일과의 의존관계:
+#   level.sk, titles.sk, pk.sk, team.sk 가 updateDisplayName()/grantTitle()/addGold() 를 호출한다.
+#   이 파일은 다른 파일보다 먼저 로드되어야 하므로 파일명 앞에 00_ 을 붙였다.
+########################################################################
+
+# ------------------------------------------------------------------
+# 칭호 등급별 색상 (일반:흰 / 희귀:파랑 / 영웅:보라 / 전설:금색)
+# ------------------------------------------------------------------
+function colorForGrade(grade: text) :: text:
+	if {_grade} is "일반":
+		return "<white>"
+	else if {_grade} is "희귀":
+		return "<blue>"
+	else if {_grade} is "영웅":
+		return "<light_purple>"
+	else if {_grade} is "전설":
+		return "<gold>"
+	else:
+		return "<gray>"
+
+# ------------------------------------------------------------------
+# 닉네임 표시: [칭호] PlayerName [Lv.42]  (카르마 2 이상이면 이름이 빨간색)
+# ------------------------------------------------------------------
+function updateDisplayName(p: player):
+	set {_lvl} = {stats::%{_p}%::level}
+	if {_lvl} is not set:
+		set {_lvl} = 1
+	set {_title} = {stats::%{_p}%::activetitle}
+	if {_title} is not set or {_title} is "":
+		set {_prefix} = ""
+	else:
+		set {_grade} = {titledata::grade::%{_title}%}
+		set {_color} = colorForGrade({_grade})
+		set {_prefix} = "%{_color}%[%{_title}%]<reset> "
+	set {_karma} = {stats::%{_p}%::karma}
+	if {_karma} is not set:
+		set {_karma} = 0
+	if {_karma} >= 2:
+		set {_namecolor} = "<red>"
+	else:
+		set {_namecolor} = "<white>"
+	set {_display} = "%{_prefix}%%{_namecolor}%%{_p}%<reset> <gray>[Lv.%{_lvl}%]<reset>"
+	set the display name of {_p} to parsed text from {_display}
+	set the tab list name of {_p} to parsed text from {_display}
+
+# ------------------------------------------------------------------
+# 칭호 지급 (중복 지급 방지 + 안내 메세지)
+# ------------------------------------------------------------------
+function grantTitle(p: player, titlename: text):
+	if {stats::%{_p}%::titles::%{_titlename}%} is true:
+		stop
+	set {stats::%{_p}%::titles::%{_titlename}%} to true
+	set {_grade} = {titledata::grade::%{_titlename}%}
+	set {_color} = colorForGrade({_grade})
+	send "<gold>[칭호 획득]<reset> %{_color}%[%{_titlename}%]<reset> <gray>(%{_grade}%)<reset>" to {_p}
+	play sound "entity.player.levelup" at {_p} with volume 1 for {_p}
+	# 첫 칭호(활성 칭호가 없을 때)라면 자동 장착
+	if {stats::%{_p}%::activetitle} is not set or {stats::%{_p}%::activetitle} is "":
+		set {stats::%{_p}%::activetitle} to {_titlename}
+		updateDisplayName({_p})
+
+function hasTitle(p: player, titlename: text) :: boolean:
+	if {stats::%{_p}%::titles::%{_titlename}%} is true:
+		return true
+	return false
+
+# ------------------------------------------------------------------
+# 골드 지급 (누적 골드 카운터 + "황금손"/"재벌" 칭호 트리거)
+# ------------------------------------------------------------------
+function addGold(p: player, amount: number):
+	set {stats::%{_p}%::gold} to ({stats::%{_p}%::gold} ? 0) + {_amount}
+	set {stats::%{_p}%::totalgold} to ({stats::%{_p}%::totalgold} ? 0) + {_amount}
+	if {stats::%{_p}%::totalgold} >= 1000000:
+		grantTitle({_p}, "재벌")
+	else if {stats::%{_p}%::totalgold} >= 100000:
+		grantTitle({_p}, "황금손")
+
+function removeGold(p: player, amount: number) :: boolean:
+	if ({stats::%{_p}%::gold} ? 0) < {_amount}:
+		return false
+	set {stats::%{_p}%::gold} to {stats::%{_p}%::gold} - {_amount}
+	return true
+
+# ------------------------------------------------------------------
+# 최초 접속 / 기본값 초기화
+# ------------------------------------------------------------------
+on join:
+	if {stats::%player%::joined} is not set:
+		set {stats::%player%::joined} to true
+		add "%player%" to {allplayers::*}
+		set {stats::%player%::level} to 1
+		set {stats::%player%::exp} to 0
+		set {stats::%player%::statpoints} to 0
+		set {stats::%player%::statpointsspent} to 0
+		set {stats::%player%::str} to 0
+		set {stats::%player%::agi} to 0
+		set {stats::%player%::vit} to 0
+		set {stats::%player%::luck} to 0
+		set {stats::%player%::eva} to 0
+		set {stats::%player%::gold} to 0
+		set {stats::%player%::totalgold} to 0
+		set {stats::%player%::job} to ""
+		set {stats::%player%::karma} to 0
+		set {stats::%player%::team} to "NONE"
+		set {stats::%player%::activetitle} to ""
+		set {stats::%player%::kills::normal} to 0
+		set {stats::%player%::kills::elite} to 0
+		set {stats::%player%::kills::guard} to 0
+		set {stats::%player%::kills::boss} to 0
+		set {stats::%player%::mana} to 50
+		set {stats::%player%::maxmana} to 50
+		grantTitle(player, "시작")
+		wait 1 tick
+		openTeamChoiceGUI(player)
+	updateDisplayName(player)
+	applyStatEffects(player)
+
+on respawn:
+	updateDisplayName(player)

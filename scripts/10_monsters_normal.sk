@@ -1,0 +1,315 @@
+########################################################################
+# 10_monsters_normal.sk — 일반 커스텀 몬스터 100종 (20브라켓 x 5종족) + 스폰 총괄 디스패치
+#
+# 필요 애드온: 없음
+#
+# 설계 노트:
+#   100종의 몬스터는 "브라켓(20개, 레벨 구간)" x "종족 슬롯(5개: 좀비/스켈레톤/거미/크리퍼/엔더맨)"
+#   으로 완전히 규칙적이므로, 브라켓 20줄 + 종족별 특성 사이클(4종 반복) 표만 저장하고
+#   on script load 시점에 100개의 몬스터 정의를 전개하여 {mobdef::normal::*} 에 저장한다.
+#   (프롬프트에 나열된 100종의 이름/수치/드롭/스폰조건을 그대로 계산해 생성 — 값 누락 없음)
+#
+# 사용 변수:
+#   {mobdef::normal::%id%::*}         - 몬스터 정의 (name/base/region/level/hp/dmg/trait/dropitem/dropchance/goldmin/goldmax)
+#   {mobdef::normal::index::%region%::%base%::*} - (region,base) 로 빠르게 후보 id 검색
+#   {mobinstance::%uuid%::*}          - 스폰된 개체의 실제 데이터(tier/level/dropitem/...)
+#   {expdata::normal::%bracket%}      - 브라켓별 지급 경험치
+#
+# 훅 / 의존관계:
+#   - on spawn of zombie/skeleton/spider/cave spider/creeper/enderman: 스폰 총괄 디스패치.
+#     우선순위 굴림(1회) 으로 보스(0.3%) > 근위(1.5%) > 정예(4%) > 일반 리스킨(20%) > 바닐라 유지 순으로
+#     배타적으로 결정한다 (11_monsters_tiers.sk / 12_monsters_boss.sk 의 함수를 호출).
+#   - on death of a monster: 커스텀 개체 처치 처리(경험치/골드/드롭/칭호), tier 별 세부 처리는
+#     11_monsters_tiers.sk / 12_monsters_boss.sk 에 위임.
+#   - 03_biomes.sk 의 getRegionTag() 를 사용.
+########################################################################
+
+function registerNormalBracket(idx: number, prefix: text, region: text, level: number, hp: number, dmg: number, dropitem: text, goldmin: number, goldmax: number):
+	set {bracketdata::prefix::%{_idx}%} to {_prefix}
+	set {bracketdata::region::%{_idx}%} to {_region}
+	set {bracketdata::level::%{_idx}%} to {_level}
+	set {bracketdata::hp::%{_idx}%} to {_hp}
+	set {bracketdata::dmg::%{_idx}%} to {_dmg}
+	set {bracketdata::dropitem::%{_idx}%} to {_dropitem}
+	set {bracketdata::goldmin::%{_idx}%} to {_goldmin}
+	set {bracketdata::goldmax::%{_idx}%} to {_goldmax}
+
+on script load:
+	# ---- 20개 브라켓 원본 데이터 ----
+	registerNormalBracket(0,  "썩어가는",     "PLAINS,FOREST", 1,  20,  5,  "낡은 장비",      5,  10)
+	registerNormalBracket(1,  "곪아버린",     "FOREST",        6,  38,  8,  "녹슨 파편",      13, 22)
+	registerNormalBracket(2,  "뒤틀린",       "DARK_FOREST",   11, 56,  12, "찢어진 천",      21, 34)
+	registerNormalBracket(3,  "굶주린",       "CAVE",          16, 74,  15, "부러진 뼈",      29, 46)
+	registerNormalBracket(4,  "저주받은",     "SWAMP",         21, 92,  18, "저주의 재",      37, 58)
+	registerNormalBracket(5,  "검은눈의",     "SWAMP",         26, 110, 21, "검은 안구",      45, 70)
+	registerNormalBracket(6,  "탐욕스러운",   "DESERT",        31, 128, 25, "탐욕의 동전",    53, 82)
+	registerNormalBracket(7,  "미쳐버린",     "DESERT",        36, 146, 28, "광기의 조각",    61, 94)
+	registerNormalBracket(8,  "흉포한",       "JUNGLE",        41, 164, 31, "야수의 이빨",    69, 106)
+	registerNormalBracket(9,  "심연의",       "JUNGLE",        46, 182, 35, "심연의 파편",    77, 118)
+	registerNormalBracket(10, "얼어붙은",     "SNOWY_TAIGA",   51, 200, 38, "서리 결정",      85, 130)
+	registerNormalBracket(11, "불타오르는",   "SNOWY_TAIGA",   56, 218, 41, "화염 정수",      93, 142)
+	registerNormalBracket(12, "타락한",       "MOUNTAINS",     61, 236, 45, "타락한 인장",    101, 154)
+	registerNormalBracket(13, "절망에 잠긴",  "MOUNTAINS",     66, 254, 48, "절망의 눈물",    109, 166)
+	registerNormalBracket(14, "공포의",       "MUSHROOM",      71, 272, 51, "공포의 뿔",      117, 178)
+	registerNormalBracket(15, "재앙의",       "MUSHROOM",      76, 290, 55, "재앙의 파편",    125, 190)
+	registerNormalBracket(16, "파멸을 부르는", "NETHER_BORDER", 81, 308, 58, "파멸의 인장",   133, 202)
+	registerNormalBracket(17, "악몽 같은",    "NETHER_BORDER", 86, 326, 61, "악몽의 가루",    141, 214)
+	registerNormalBracket(18, "세상을 저주하는", "END_BORDER", 91, 344, 64, "저주받은 영혼석", 149, 226)
+	registerNormalBracket(19, "종말의",       "END_BORDER",    96, 362, 68, "종말의 파편",    157, 238)
+
+	# ---- 종족 슬롯 (이름 접미사 / 바닐라 베이스 타입 / 드롭확률 가산 / 4종 특성 사이클) ----
+	set {mobslot::suffix::0} to "좀비"       ; set {mobslot::base::0} to "ZOMBIE"
+	set {mobslot::suffix::1} to "스켈레톤"    ; set {mobslot::base::1} to "SKELETON"
+	set {mobslot::suffix::2} to "거미"       ; set {mobslot::base::2} to "SPIDER"
+	set {mobslot::suffix::3} to "크리퍼"     ; set {mobslot::base::3} to "CREEPER"
+	set {mobslot::suffix::4} to "엔더맨"     ; set {mobslot::base::4} to "ENDERMAN"
+	set {mobslot::dropbonus::0} to 30
+	set {mobslot::dropbonus::1} to 35
+	set {mobslot::dropbonus::2} to 40
+	set {mobslot::dropbonus::3} to 45
+	set {mobslot::dropbonus::4} to 50
+
+	set {traitcycle::0::0} to "none"          ; set {traitcycle::1::0} to "poison10"        ; set {traitcycle::2::0} to "bind3s"        ; set {traitcycle::3::0} to "speed10"        ; set {traitcycle::4::0} to "burnonhit"
+	set {traitcycle::0::1} to "reflect20"     ; set {traitcycle::1::1} to "slow2s"           ; set {traitcycle::2::1} to "blind20_2s"    ; set {traitcycle::3::1} to "lowhp30speed30"  ; set {traitcycle::4::1} to "defdown5_3s"
+	set {traitcycle::0::2} to "silence15_2s"  ; set {traitcycle::1::2} to "teleportonhit"    ; set {traitcycle::2::2} to "knockback50"   ; set {traitcycle::3::2} to "bleed25_3s"      ; set {traitcycle::4::2} to "nightatk15"
+	set {traitcycle::0::3} to "lowhp50atk20"  ; set {traitcycle::1::3} to "fear10_2s"        ; set {traitcycle::2::3} to "packbonus10"   ; set {traitcycle::3::3} to "manacost15"      ; set {traitcycle::4::3} to "explodeondeath"
+
+	# ---- 100종 전개 ----
+	delete {mobdef::normal::allids::*}
+	set {_id} = 0
+	loop 20 times:
+		set {_bracket} = loop-number - 1
+		loop 5 times:
+			set {_slot} = loop-number - 1
+			add 1 to {_id}
+			set {_cyclepos} = {_bracket} mod 4
+			set {_prefix} = {bracketdata::prefix::%{_bracket}%}
+			set {_suffix} = {mobslot::suffix::%{_slot}%}
+			set {mobdef::normal::%{_id}%::name} to "%{_prefix}% %{_suffix}%"
+			set {mobdef::normal::%{_id}%::base} to {mobslot::base::%{_slot}%}
+			set {mobdef::normal::%{_id}%::region} to {bracketdata::region::%{_bracket}%}
+			set {mobdef::normal::%{_id}%::level} to {bracketdata::level::%{_bracket}%}
+			set {mobdef::normal::%{_id}%::hp} to {bracketdata::hp::%{_bracket}%}
+			set {mobdef::normal::%{_id}%::dmg} to {bracketdata::dmg::%{_bracket}%}
+			set {mobdef::normal::%{_id}%::trait} to {traitcycle::%{_slot}%::%{_cyclepos}%}
+			set {mobdef::normal::%{_id}%::dropitem} to {bracketdata::dropitem::%{_bracket}%}
+			set {mobdef::normal::%{_id}%::dropchance} to {mobslot::dropbonus::%{_slot}%}
+			set {mobdef::normal::%{_id}%::goldmin} to {bracketdata::goldmin::%{_bracket}%}
+			set {mobdef::normal::%{_id}%::goldmax} to {bracketdata::goldmax::%{_bracket}%}
+			add {_id} to {mobdef::normal::allids::*}
+			set {_regionlist::*} = {bracketdata::region::%{_bracket}%} split at ","
+			loop {_regionlist::*}:
+				add {_id} to {mobdef::normal::index::%loop-value%::%{mobslot::base::%{_slot}%}%::*}
+
+	# ---- 브라켓별 경험치 표 (일반/정예/근위/엘리트 공통 인덱스 0~19) ----
+	set {expdata::normal::0} to 94   ; set {expdata::normal::1} to 303  ; set {expdata::normal::2} to 596  ; set {expdata::normal::3} to 940
+	set {expdata::normal::4} to 1319 ; set {expdata::normal::5} to 1722 ; set {expdata::normal::6} to 2357 ; set {expdata::normal::7} to 3092
+	set {expdata::normal::8} to 3927 ; set {expdata::normal::9} to 4862 ; set {expdata::normal::10} to 5897; set {expdata::normal::11} to 7032
+	set {expdata::normal::12} to 8267; set {expdata::normal::13} to 9602; set {expdata::normal::14} to 11037; set {expdata::normal::15} to 12572
+	set {expdata::normal::16} to 14207; set {expdata::normal::17} to 15942; set {expdata::normal::18} to 25000; set {expdata::normal::19} to 30000
+
+	set {expdata::elite::0} to 141   ; set {expdata::elite::1} to 455  ; set {expdata::elite::2} to 894  ; set {expdata::elite::3} to 1410
+	set {expdata::elite::4} to 1979  ; set {expdata::elite::5} to 2583 ; set {expdata::elite::6} to 3536 ; set {expdata::elite::7} to 4638
+	set {expdata::elite::8} to 5891  ; set {expdata::elite::9} to 7293 ; set {expdata::elite::10} to 8846; set {expdata::elite::11} to 10548
+	set {expdata::elite::12} to 12401; set {expdata::elite::13} to 14403; set {expdata::elite::14} to 16556; set {expdata::elite::15} to 18858
+	set {expdata::elite::16} to 21311; set {expdata::elite::17} to 23913; set {expdata::elite::18} to 37500; set {expdata::elite::19} to 45000
+
+	set {expdata::guard::0} to 188   ; set {expdata::guard::1} to 606  ; set {expdata::guard::2} to 1192 ; set {expdata::guard::3} to 1880
+	set {expdata::guard::4} to 2638  ; set {expdata::guard::5} to 3444 ; set {expdata::guard::6} to 4714 ; set {expdata::guard::7} to 6184
+	set {expdata::guard::8} to 7854  ; set {expdata::guard::9} to 9724 ; set {expdata::guard::10} to 11794; set {expdata::guard::11} to 14064
+	set {expdata::guard::12} to 16534; set {expdata::guard::13} to 19204; set {expdata::guard::14} to 22074; set {expdata::guard::15} to 25144
+	set {expdata::guard::16} to 28414; set {expdata::guard::17} to 31884; set {expdata::guard::18} to 50000; set {expdata::guard::19} to 60000
+
+	set {expdata::boss::0} to 282    ; set {expdata::boss::1} to 909   ; set {expdata::boss::2} to 1788  ; set {expdata::boss::3} to 2820
+	set {expdata::boss::4} to 3957   ; set {expdata::boss::5} to 5166  ; set {expdata::boss::6} to 7071  ; set {expdata::boss::7} to 9276
+	set {expdata::boss::8} to 11781  ; set {expdata::boss::9} to 14586 ; set {expdata::boss::10} to 17691; set {expdata::boss::11} to 21096
+	set {expdata::boss::12} to 24801 ; set {expdata::boss::13} to 28806; set {expdata::boss::14} to 33111; set {expdata::boss::15} to 37716
+	set {expdata::boss::16} to 42621 ; set {expdata::boss::17} to 47826; set {expdata::boss::18} to 75000; set {expdata::boss::19} to 90000
+
+	broadcast "<gray>[시스템] 일반 몬스터 100종 데이터 생성 완료" to console
+
+function expBracketOf(level: number) :: number:
+	set {_b} = floor((({_level} - 1) / 5))
+	if {_b} > 19:
+		set {_b} = 19
+	if {_b} < 0:
+		set {_b} = 0
+	return {_b}
+
+function getNormalExp(level: number) :: number:
+	return {expdata::normal::%expBracketOf({_level})%}
+function getEliteTierExp(level: number) :: number:
+	return {expdata::elite::%expBracketOf({_level})%}
+function getGuardTierExp(level: number) :: number:
+	return {expdata::guard::%expBracketOf({_level})%}
+function getBossTierExp(level: number) :: number:
+	return {expdata::boss::%expBracketOf({_level})%}
+
+########################################################################
+# 스폰 총괄 디스패치 (배타적 1회 굴림: 보스 > 근위 > 정예 > 일반 리스킨 > 바닐라)
+########################################################################
+function normalizeBaseType(base: text) :: text:
+	if {_base} is "CAVE_SPIDER":
+		return "SPIDER"
+	return {_base}
+
+on spawn of zombie, skeleton, spider, cave spider, creeper, enderman, zombie villager, blaze, piglin:
+	set {_region} = getRegionTag(location of event-entity)
+	set {_base} = normalizeBaseType("%type of event-entity%")
+	set {_r} = random number between 0.0 and 100.0
+
+	if {_r} <= 0.3:
+		if trySpawnBoss(event-entity, {_region}, {_base}) is true:
+			stop trigger
+	if {_r} <= 1.8:
+		if trySpawnGuard(event-entity, {_region}, {_base}) is true:
+			stop trigger
+	if {_r} <= 5.8:
+		if trySpawnElite(event-entity, {_region}, {_base}) is true:
+			stop trigger
+	if {_r} <= 25.8:
+		spawnNormalVariant(event-entity, {_region}, {_base})
+
+function pickNormalId(region: text, base: text) :: number:
+	set {_ids} = {mobdef::normal::index::%{_region}%::%{_base}%::*}
+	if {_ids} is not set:
+		return -1
+	return a random element out of {_ids}
+
+function spawnNormalVariant(e: entity, region: text, base: text):
+	set {_id} = pickNormalId({_region}, {_base})
+	if {_id} = -1:
+		stop
+	applyNormalStatsToEntity({_e}, {_id})
+	tagMobInstance({_e}, "NORMAL", {_id})
+
+function applyNormalStatsToEntity(e: entity, id: number):
+	set {_hp} = {mobdef::normal::%{_id}%::hp}
+	set {_dmg} = {mobdef::normal::%{_id}%::dmg}
+	set {_lvl} = {mobdef::normal::%{_id}%::level}
+	set {_name} = {mobdef::normal::%{_id}%::name}
+	set the max health of {_e} to {_hp}
+	heal {_e} by {_hp}
+	set the attack damage of {_e} to {_dmg}
+	set name of {_e} to "<gray>(Lv.%{_lvl}% %{_name}%)"
+	# 커스텀 몬스터가 디스폰되지 않도록 방지하려면 서버측 plugin.yml/스포너 설정 또는
+	# 별도 애드온(NoAI/Persistent 태그)이 필요할 수 있음 — 순수 Skript 만으로는 despawn 제어에 한계가 있음
+
+function tagMobInstance(e: entity, tier: text, defid: number):
+	set {_uuid} = "%uuid of {_e}%"
+	set {mobinstance::%{_uuid}%::tier} to {_tier}
+	if {_tier} is "NORMAL":
+		set {mobinstance::%{_uuid}%::defid} to {_defid}
+		set {mobinstance::%{_uuid}%::level} to {mobdef::normal::%{_defid}%::level}
+		set {mobinstance::%{_uuid}%::dropitem} to {mobdef::normal::%{_defid}%::dropitem}
+		set {mobinstance::%{_uuid}%::dropchance} to {mobdef::normal::%{_defid}%::dropchance}
+		set {mobinstance::%{_uuid}%::goldmin} to {mobdef::normal::%{_defid}%::goldmin}
+		set {mobinstance::%{_uuid}%::goldmax} to {mobdef::normal::%{_defid}%::goldmax}
+		set {mobinstance::%{_uuid}%::trait} to {mobdef::normal::%{_defid}%::trait}
+		set {mobinstance::%{_uuid}%::name} to {mobdef::normal::%{_defid}%::name}
+
+########################################################################
+# 특성(trait) 전투 적용 — 커스텀 몬스터가 가하는/받는 피해에 개입
+########################################################################
+on damage:
+	if victim is a monster:
+		set {_uuid} = "%uuid of victim%"
+		if {mobinstance::%{_uuid}%::tier} is set:
+			set {_trait} = {mobinstance::%{_uuid}%::trait}
+			if {_trait} is "reflect20":
+				if attacker is set:
+					if random number between 0.0 and 1.0 <= 0.2:
+						damage attacker by 5
+			else if {_trait} is "bind3s":
+				if attacker is a player:
+					apply potion effect of slowness of tier 10 to attacker for 60 ticks
+			else if {_trait} is "lowhp30speed30":
+				if health of victim <= (max health of victim * 0.3):
+					apply potion effect of speed of tier 2 to victim for 60 ticks
+
+	if attacker is a monster:
+		set {_uuid} = "%uuid of attacker%"
+		if {mobinstance::%{_uuid}%::tier} is set:
+			set {_trait} = {mobinstance::%{_uuid}%::trait}
+			if {_trait} is "poison10":
+				if random number between 0.0 and 1.0 <= 0.1:
+					apply potion effect of poison to victim for 60 ticks
+			else if {_trait} is "slow2s":
+				apply potion effect of slowness of tier 1 to victim for 40 ticks
+			else if {_trait} is "teleportonhit":
+				teleport attacker to (location 3 blocks in front of attacker)
+			else if {_trait} is "fear10_2s":
+				if random number between 0.0 and 1.0 <= 0.1:
+					apply potion effect of nausea to victim for 40 ticks
+			else if {_trait} is "blind20_2s":
+				if random number between 0.0 and 1.0 <= 0.2:
+					apply potion effect of blindness to victim for 40 ticks
+			else if {_trait} is "knockback50":
+				push victim in horizontal direction of attacker with speed 1.5
+			else if {_trait} is "packbonus10":
+				set {_dmg} = damage * 1.1
+				set damage to {_dmg}
+			else if {_trait} is "bleed25_3s":
+				if random number between 0.0 and 1.0 <= 0.25:
+					apply potion effect of poison of tier 2 to victim for 60 ticks
+			else if {_trait} is "manacost15":
+				if victim is a player:
+					if random number between 0.0 and 1.0 <= 0.15:
+						subtract 5 from {stats::%victim%::mana}
+			else if {_trait} is "burnonhit":
+				ignite victim for 2 seconds
+			else if {_trait} is "defdown5_3s":
+				apply potion effect of weakness of tier 1 to victim for 60 ticks
+			else if {_trait} is "nightatk15":
+				if time of world of attacker > 13000 and time of world of attacker < 23000:
+					set {_dmg} = damage * 1.15
+					set damage to {_dmg}
+			else if {_trait} is "silence15_2s":
+				if victim is a player:
+					if random number between 0.0 and 1.0 <= 0.15:
+						set {stats::%victim%::silenced} to true
+						wait 2 seconds
+						set {stats::%victim%::silenced} to false
+			else if {_trait} is "lowhp50atk20":
+				if health of attacker <= (max health of attacker * 0.5):
+					set {_dmg} = damage * 1.2
+					set damage to {_dmg}
+
+on death of a monster:
+	set {_uuid} = "%uuid of victim%"
+	if {mobinstance::%{_uuid}%::tier} is not set:
+		stop trigger
+	if {mobinstance::%{_uuid}%::trait} is "explodeondeath":
+		create explosion of force 0 at location of victim
+		loop all players in world of victim:
+			if distanceBetween(location of loop-player, location of victim) <= 2:
+				damage loop-player by 10
+
+	set {_tier} = {mobinstance::%{_uuid}%::tier}
+	if attacker of event is a player:
+		set {_p} = attacker of event
+		if {_tier} is "NORMAL":
+			handleMonsterKillReward({_p}, {mobinstance::%{_uuid}%::level}, getNormalExp({mobinstance::%{_uuid}%::level}), {mobinstance::%{_uuid}%::goldmin}, {mobinstance::%{_uuid}%::goldmax}, {mobinstance::%{_uuid}%::dropitem}, {mobinstance::%{_uuid}%::dropchance})
+			add 1 to {stats::%{_p}%::kills::normal}
+			checkMonsterKillTitles({_p})
+			checkDarkForestKillTitle({_p}, getRegionTag(location of victim))
+			if {lastcrit::%{_p}%} is true:
+				checkCritKillTitle({_p})
+		else if {_tier} is "ELITE" or {_tier} is "GUARD":
+			rewardEliteOrGuardKill({_p}, {_uuid}, {_tier})
+		else if {_tier} is "BOSS":
+			rewardBossKill({_p}, {_uuid}, location of victim)
+	delete {mobinstance::%{_uuid}%::*}
+
+########################################################################
+# 공용 처치 보상 함수 (일반/정예/근위 공용, 12_monsters_boss.sk 는 자체 처리)
+########################################################################
+function handleMonsterKillReward(p: player, level: number, exp: number, goldmin: number, goldmax: number, dropitem: text, dropchance: number):
+	addExp({_p}, {_exp})
+	set {_gold} = random integer between {_goldmin} and {_goldmax}
+	addGold({_p}, {_gold})
+	if random number between 0.0 and 1.0 <= ({_dropchance} / 100):
+		give {_p} a paper named "<yellow>%{_dropitem}%" with lore "<gray>몬스터 드롭 재료"
+		send action bar "<gold>+%{_exp}% EXP  <gray>|  <yellow>+%{_gold}%G  <gray>|  <aqua>%{_dropitem}%" to {_p}
+	else:
+		send action bar "<gold>+%{_exp}% EXP  <gray>|  <yellow>+%{_gold}%G" to {_p}

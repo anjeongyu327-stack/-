@@ -1,0 +1,25 @@
+########################################################################
+# 04_dimensions.sk — 차원 진입 레벨 제한 (네더 50Lv, 엔드 80Lv)
+#
+# 필요 애드온: 없음
+#
+# 사용 변수: {stats::%player%::level} (level.sk 에서 관리)
+#
+# 훅: on player portal / on player enters bed... 실제로는
+#     "on portal" (네더포탈), "on player teleport"(엔드포탈이 텔레포트로 처리되는 경우) 를 사용.
+#     서버 최초 입장시 03_biomes.sk 의 tryFirstNetherTitle / tryFirstEndTitle 호출.
+########################################################################
+
+on world change:
+	if world of player is "world_nether":
+		if ({stats::%player%::level} ? 1) < 50:
+			teleport player to spawn location of world "world"
+			send "<red>[차원] 네더 입장 조건(50Lv)을 만족하지 못해 강제 귀환되었습니다." to player
+		else:
+			tryFirstNetherTitle(player)
+	else if world of player is "world_the_end":
+		if ({stats::%player%::level} ? 1) < 80:
+			teleport player to spawn location of world "world"
+			send "<red>[차원] 엔드 입장 조건(80Lv)을 만족하지 못해 강제 귀환되었습니다." to player
+		else:
+			tryFirstEndTitle(player)

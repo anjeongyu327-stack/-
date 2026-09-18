@@ -1,0 +1,254 @@
+########################################################################
+# 08_jobs.sk — 직업 시스템
+# 주의: 프롬프트 본문의 [직업 종류] 목록은 실제로 13종(일반 8종 + 히든 5종)이 채워져 있음.
+#       최종 요청 문구의 "직업 14종"은 원문 데이터 개수와 불일치하여, 실제 제공된 13종 그대로 구현함.
+#
+# 필요 애드온: 없음
+#
+# 사용 변수:
+#   {jobdata::hidden::%job%}         - 히든 직업 여부 (true/false)
+#   {jobdata::type::%job%}           - 직업 유형(전투/원거리 등, 안내용)
+#   {jobtooldata::%job%}             - 전용 아이템 이름 ("" = 없음)
+#   {jobdata::skills::%job%::*}      - 스킬 이름 목록 (습득순)
+#   {jobdata::skillreq::%skillname%} - 스킬 습득 레벨
+#   {jobdata::skillowner::%skillname%} - 해당 스킬이 속한 직업
+#   {jobdata::skillpassive::%skillname%} - 패시브(&) 여부
+#   {joblocation::%job%::*}          - /전직장소 로 등록된 좌표 (world,x,y,z)
+#   {server::hiddenjob::%job%}       - 히든 직업 보유자 (서버 전체 1명)
+#   {server::anyhiddenjobclaimed}    - 서버 최초 히든직업 획득 여부 (유일무이 칭호)
+#   {stats::%player%::job}           - 현재 직업
+#   {jobchange::%player%::progress}/{::target} - 전직 진행 상태(5초 웅크림)
+#
+# 훅 / 의존관계:
+#   - 03_biomes.sk 의 /전직장소 명령이 registerJobLocation() 을 호출
+#   - every 1 second 로 웅크림 진행률(20/40/60/80/100%) 판정, 중단시 취소
+#   - completeJobChange() 가 02_titles.sk 의 grantTitle() 호출
+#   - skills.sk 가 이 파일의 jobdata::skills 목록을 참조해 스킬 슬롯 자동배정/해금을 처리
+########################################################################
+
+function registerJobSkill(job: text, skillname: text, level: number, passive: boolean):
+	add {_skillname} to {jobdata::skills::%{_job}%::*}
+	set {jobdata::skillreq::%{_skillname}%} to {_level}
+	set {jobdata::skillowner::%{_skillname}%} to {_job}
+	set {jobdata::skillpassive::%{_skillname}%} to {_passive}
+
+function registerJob(job: text, hidden: boolean, type: text, tool: text):
+	add {_job} to {jobdata::list::*}
+	set {jobdata::hidden::%{_job}%} to {_hidden}
+	set {jobdata::type::%{_job}%} to {_type}
+	set {jobtooldata::%{_job}%} to {_tool}
+
+on script load:
+	delete {jobdata::list::*}
+
+	registerJob("검사(서양)", false, "전투", "")
+	registerJobSkill("검사(서양)", "패링", 1, false)
+	registerJobSkill("검사(서양)", "가르기", 10, false)
+	registerJobSkill("검사(서양)", "오러", 20, true)
+	registerJobSkill("검사(서양)", "스턴패링", 35, false)
+	registerJobSkill("검사(서양)", "마나블레이드", 50, false)
+
+	registerJob("검사(동양)", false, "전투", "")
+	registerJobSkill("검사(동양)", "패링", 1, false)
+	registerJobSkill("검사(동양)", "검기", 10, false)
+	registerJobSkill("검사(동양)", "기", 20, true)
+	registerJobSkill("검사(동양)", "카운터", 30, false)
+	registerJobSkill("검사(동양)", "스텝", 40, true)
+	registerJobSkill("검사(동양)", "섬멸", 50, false)
+
+	registerJob("마법사", false, "원거리 전투·극딜", "마법지팡이")
+	registerJobSkill("마법사", "마나볼", 1, false)
+	registerJobSkill("마법사", "파이어볼", 10, false)
+	registerJobSkill("마법사", "마나쉴드", 20, true)
+	registerJobSkill("마법사", "일렉트릭", 30, false)
+	registerJobSkill("마법사", "블리자드볼", 40, false)
+	registerJobSkill("마법사", "마나브레스", 50, false)
+
+	registerJob("궁수", false, "후방견제·극딜", "무한 활")
+	registerJobSkill("궁수", "숙련된 궁술실력", 1, true)
+	registerJobSkill("궁수", "파워샷", 10, false)
+	registerJobSkill("궁수", "레인애로우", 20, false)
+	registerJobSkill("궁수", "파이어애로우", 30, false)
+	registerJobSkill("궁수", "속사", 40, false)
+	registerJobSkill("궁수", "피날레", 50, false)
+
+	registerJob("힐러", false, "보조·언데드 제거", "")
+	registerJobSkill("힐러", "빠른 재생", 1, true)
+	registerJobSkill("힐러", "힐", 10, false)
+	registerJobSkill("힐러", "그레이트힐", 20, false)
+	registerJobSkill("힐러", "영역힐", 30, false)
+	registerJobSkill("힐러", "성스러운심판", 40, false)
+	registerJobSkill("힐러", "절대영역힐", 50, false)
+
+	registerJob("탱커", false, "탱커·어그로 관리", "")
+	registerJobSkill("탱커", "추가 체력", 1, true)
+	registerJobSkill("탱커", "피해감소", 10, true)
+	registerJobSkill("탱커", "더욱더 단단함", 20, true)
+	registerJobSkill("탱커", "성벽", 30, false)
+	registerJobSkill("탱커", "돌진", 40, false)
+	registerJobSkill("탱커", "자폭", 50, false)
+
+	registerJob("마검사", true, "전투·디버프", "")
+	registerJobSkill("마검사", "파이어소드", 1, false)
+	registerJobSkill("마검사", "일렉트릭소드", 10, false)
+	registerJobSkill("마검사", "브레이크소드", 15, false)
+	registerJobSkill("마검사", "스타소드", 30, false)
+	registerJobSkill("마검사", "성군베기", 40, false)
+	registerJobSkill("마검사", "헬파이어소드", 50, false)
+
+	registerJob("고고학자", true, "탐색·전투·서브", "돋보기")
+	registerJobSkill("고고학자", "탐색", 1, false)
+	registerJobSkill("고고학자", "채취", 10, false)
+	registerJobSkill("고고학자", "흡수", 20, false)
+
+	registerJob("약탈자", false, "전투(기습)", "")
+	registerJobSkill("약탈자", "약탈 페널티 제거", 1, true)
+	registerJobSkill("약탈자", "골드탈취", 10, true)
+	registerJobSkill("약탈자", "스킬봉인", 20, false)
+	registerJobSkill("약탈자", "경험치소매치기", 30, true)
+	registerJobSkill("약탈자", "은신", 40, false)
+	registerJobSkill("약탈자", "비겁한습격", 50, false)
+
+	registerJob("요리사", false, "서브(요리)", "")
+	registerJobSkill("요리사", "시즈닝뿌리기", 1, true)
+	registerJobSkill("요리사", "가니쉬추가", 10, true)
+	registerJobSkill("요리사", "소스추가", 20, true)
+	registerJobSkill("요리사", "요리실력", 30, true)
+	registerJobSkill("요리사", "요리확률증가", 40, true)
+	registerJobSkill("요리사", "국물뿌리기", 50, true)
+
+	registerJob("운명개변자", true, "전투(랜덤 계열)", "")
+	registerJobSkill("운명개변자", "럭키펀치", 1, true)
+	registerJobSkill("운명개변자", "랜덤스킬발동(하급)", 10, true)
+	registerJobSkill("운명개변자", "랜덤스킬발동(중급)", 20, true)
+	registerJobSkill("운명개변자", "랜덤스킬발동(상급)", 30, true)
+	registerJobSkill("운명개변자", "랜덤패시브", 50, true)
+
+	registerJob("강철의 심장", true, "서브(강화/제작)", "")
+	registerJobSkill("강철의 심장", "속성부여", 1, false)
+	registerJobSkill("강철의 심장", "강화", 10, false)
+	registerJobSkill("강철의 심장", "고정속성부여", 20, false)
+	registerJobSkill("강철의 심장", "진화", 30, false)
+	registerJobSkill("강철의 심장", "룬제작", 40, false)
+	registerJobSkill("강철의 심장", "룬무기각인", 50, false)
+
+	registerJob("모방자", true, "전투·변칙", "모방점토")
+	registerJobSkill("모방자", "스킬모방", 1, true)
+	registerJobSkill("모방자", "무기모방", 20, true)
+	registerJobSkill("모방자", "모방차원", 40, false)
+
+	broadcast "<gray>[시스템] 직업 데이터 %size of {jobdata::list::*}%종 로드 완료" to console
+
+# ------------------------------------------------------------------
+# /전직장소 <직업이름> 등록 (03_biomes.sk 명령에서 호출)
+# ------------------------------------------------------------------
+function registerJobLocation(p: player, job: text, loc: location):
+	if {_job} is not in {jobdata::list::*}:
+		send "<red>존재하지 않는 직업입니다: %{_job}%" to {_p}
+		stop
+	set {joblocation::%{_job}%::world} to "%world of {_loc}%"
+	set {joblocation::%{_job}%::x} to x of {_loc}
+	set {joblocation::%{_job}%::y} to y of {_loc}
+	set {joblocation::%{_job}%::z} to z of {_loc}
+	send "<green>[전직장소] %{_job}% 전직 장소가 현재 위치로 등록되었습니다." to {_p}
+
+function nearestJobLocation(p: player) :: text:
+	loop {jobdata::list::*}:
+		if {joblocation::%loop-value%::world} is set:
+			if {joblocation::%loop-value%::world} is "%world of {_p}%":
+				set {_dx} = x of location of {_p} - {joblocation::%loop-value%::x}
+				set {_dy} = y of location of {_p} - {joblocation::%loop-value%::y}
+				set {_dz} = z of location of {_p} - {joblocation::%loop-value%::z}
+				set {_dist} = sqrt(({_dx} * {_dx}) + ({_dy} * {_dy}) + ({_dz} * {_dz}))
+				if {_dist} <= 3:
+					return loop-value
+	return ""
+
+every 1 second:
+	loop all players:
+		set {_p} = loop-player
+		set {_near} = nearestJobLocation({_p})
+		if {_near} is not "" and {_p} is sneaking:
+			if {jobchange::%{_p}%::target} is not {_near}:
+				set {jobchange::%{_p}%::target} to {_near}
+				set {jobchange::%{_p}%::progress} to 0
+			add 1 to {jobchange::%{_p}%::progress}
+			set {_pct} = {jobchange::%{_p}%::progress} * 20
+			send action bar "<yellow>[%{_near}%] 전직 진행중: <gold>%{_pct}%%%" to {_p}
+			if {jobchange::%{_p}%::progress} >= 5:
+				completeJobChange({_p}, {_near})
+				delete {jobchange::%{_p}%::progress}
+				delete {jobchange::%{_p}%::target}
+		else:
+			if ({jobchange::%{_p}%::progress} ? 0) > 0:
+				send action bar "<red>전직이 취소되었습니다." to {_p}
+			delete {jobchange::%{_p}%::progress}
+			delete {jobchange::%{_p}%::target}
+
+function completeJobChange(p: player, job: text):
+	if {stats::%{_p}%::job} is {_job}:
+		send "<red>이미 %{_job}% 직업입니다." to {_p}
+		stop
+	if {jobdata::hidden::%{_job}%} is true:
+		if {server::hiddenjob::%{_job}%} is set and {server::hiddenjob::%{_job}%} is not "%{_p}%":
+			send "<red>[히든 직업] %{_job}%은(는) 이미 다른 유저가 차지하고 있습니다." to {_p}
+			stop
+		set {server::hiddenjob::%{_job}%} to "%{_p}%"
+		if {server::anyhiddenjobclaimed} is not true:
+			set {server::anyhiddenjobclaimed} to true
+			grantTitle({_p}, "유일무이")
+			broadcast "<gold>[서버 최초] %{_p}%님이 서버 최초로 히든 직업(%{_job}%)을 차지했습니다!"
+
+	# 기존 히든 직업 보유였다면 슬롯 반납
+	set {_oldjob} = {stats::%{_p}%::job}
+	if {_oldjob} is not "" and {jobdata::hidden::%{_oldjob}%} is true:
+		if {server::hiddenjob::%{_oldjob}%} is "%{_p}%":
+			delete {server::hiddenjob::%{_oldjob}%}
+
+	set {stats::%{_p}%::job} to {_job}
+	resetSkillSlots({_p})
+	giveJobTool({_p}, {_job})
+	send "<gold><bold>[전직 완료]<reset> <yellow>%{_p}%<reset>님이 <aqua>%{_job}%<reset> 직업을 얻었습니다!" to all players
+	play sound "entity.player.levelup" at {_p} with volume 1 for {_p}
+
+	grantTitle({_p}, "전직자")
+	if {_job} is "검사(서양)" or {_job} is "검사(동양)":
+		grantTitle({_p}, "검의 길")
+	else if {_job} is "마법사":
+		grantTitle({_p}, "마나의 흐름")
+	else if {_job} is "궁수":
+		grantTitle({_p}, "활의 명수")
+	else if {_job} is "힐러":
+		grantTitle({_p}, "생명의 손길")
+	else if {_job} is "탱커":
+		grantTitle({_p}, "불굴의 방패")
+	if {jobdata::hidden::%{_job}%} is true:
+		grantTitle({_p}, "숨겨진 힘")
+
+function giveJobTool(p: player, job: text):
+	set {_tool} = {jobtooldata::%{_job}%}
+	if {_tool} is "마법지팡이":
+		give {_p} a blaze rod named "<light_purple>마법지팡이" with lore "<gray>마법사 전용 무기"
+	else if {_tool} is "무한 활":
+		give {_p} a bow named "<green>무한 활" with lore "<gray>궁수 전용 무기 (화살 소모 없음)"
+		give {_p} 10 of arrow
+	else if {_tool} is "돋보기":
+		give {_p} a spyglass named "<yellow>돋보기" with lore "<gray>고고학자 전용 도구"
+	else if {_tool} is "모방점토":
+		give {_p} a clay ball named "<aqua>모방점토" with lore "<gray>모방자 전용 재료"
+
+command /직업정보:
+	trigger:
+		set {_job} = {stats::%player%::job}
+		if {_job} is "" or {_job} is not set:
+			send "<gray>아직 직업이 없습니다. 전직 장소에서 5초간 웅크려 전직하세요." to player
+			stop
+		send "<gold>=== 직업 정보 ===" to player
+		send "<yellow>직업: <white>%{_job}%<gray> (%{jobdata::type::%{_job}%}%)" to player
+		loop {jobdata::skills::%{_job}%::*}:
+			set {_req} = {jobdata::skillreq::%loop-value%}
+			set {_have} = ({stats::%player%::level} ? 1) >= {_req}
+			if {_have} is true:
+				send "<green>✔ %loop-value% <gray>(%{_req}%Lv)" to player
+			else:
+				send "<dark_gray>✘ %loop-value% (%{_req}%Lv)" to player

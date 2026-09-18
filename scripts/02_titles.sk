@@ -1,0 +1,183 @@
+########################################################################
+# 02_titles.sk — 칭호 데이터 테이블 + 공용 칭호 판정 함수
+#
+# 필요 애드온: 없음
+#
+# 사용 변수:
+#   {titledata::grade::%titlename%}      - 칭호 등급 (일반/희귀/영웅/전설)
+#   {titledata::condition::%titlename%}  - 칭호 획득 조건 설명 (GUI용)
+#   {titledata::list::*}                 - 전체 칭호 이름 목록 (인덱스 리스트)
+#   {stats::%player%::titles::%name%}    - 보유 여부 (00_core.sk 의 grantTitle 이 기록)
+#   {stats::%player%::activetitle}       - 장착 칭호 (00_core.sk)
+#
+# 이 파일이 거는 훅:
+#   on script load  : 51종 칭호 메타데이터 등록
+#   함수 checkMonsterKillTitles / checkEliteKillTitles / checkGuardKillTitles /
+#        checkBossKillTitles / checkStatInvestTitles / checkCritKillTitle /
+#        checkEvasionTitle 는 monsters_*.sk, stats.sk 에서 호출된다.
+#   GUI 는 gui.sk 의 칭호 GUI(openTitleGUI)에서 이 파일의 titledata 를 참조한다.
+########################################################################
+
+function registerTitle(name: text, condition: text, grade: text):
+	add {_name} to {titledata::list::*}
+	set {titledata::grade::%{_name}%} to {_grade}
+	set {titledata::condition::%{_name}%} to {_condition}
+
+on script load:
+	delete {titledata::list::*}
+	registerTitle("시작", "게임에 처음 접속하세요", "일반")
+	registerTitle("초보 모험가", "레벨 5를 달성하세요", "일반")
+	registerTitle("성장하는 자", "레벨 10을 달성하세요", "일반")
+	registerTitle("숙련자", "레벨 25를 달성하세요", "희귀")
+	registerTitle("베테랑", "레벨 50을 달성하세요", "희귀")
+	registerTitle("전설의 시작", "레벨 75를 달성하세요", "영웅")
+	registerTitle("정점에 선 자", "레벨 100을 달성하세요", "전설")
+	registerTitle("학살자", "몬스터 100마리를 처치하세요", "일반")
+	registerTitle("살육자", "몬스터 1,000마리를 처치하세요", "희귀")
+	registerTitle("멸종시키는 자", "몬스터 10,000마리를 처치하세요", "영웅")
+	registerTitle("정예 사냥꾼", "정예 몬스터 100마리를 처치하세요", "희귀")
+	registerTitle("근위 파괴자", "근위 몬스터 50마리를 처치하세요", "희귀")
+	registerTitle("엘리트 킬러", "엘리트 몬스터 30마리를 처치하세요", "영웅")
+	registerTitle("엘리트 학살자", "엘리트 몬스터 300마리를 처치하세요", "전설")
+	registerTitle("전직자", "아무 직업으로나 전직하세요", "일반")
+	registerTitle("검의 길", "검사(동양) 또는 검사(서양)로 전직하세요", "일반")
+	registerTitle("마나의 흐름", "마법사로 전직하세요", "일반")
+	registerTitle("활의 명수", "궁수로 전직하세요", "일반")
+	registerTitle("생명의 손길", "힐러로 전직하세요", "일반")
+	registerTitle("불굴의 방패", "탱커로 전직하세요", "일반")
+	registerTitle("숨겨진 힘", "히든 직업으로 전직하세요", "영웅")
+	registerTitle("유일무이", "서버 최초로 히든 직업을 차지하세요", "전설")
+	registerTitle("스킬 수집가", "스킬을 10개 습득하세요", "희귀")
+	registerTitle("만렙 스킬러", "한 직업의 모든 스킬을 50Lv까지 습득하세요", "영웅")
+	registerTitle("황금손", "누적 골드 10만을 획득하세요", "일반")
+	registerTitle("재벌", "누적 골드 100만을 획득하세요", "희귀")
+	registerTitle("경매의 왕", "유저상점에서 거래 100회를 완료하세요", "희귀")
+	registerTitle("현상금 사냥꾼", "현상금이 걸린 유저를 처치하세요", "희귀")
+	registerTitle("수배자", "카르마 2 이상을 달성해 현상금 명단에 오르세요", "일반")
+	registerTitle("악명 높은 자", "카르마 10에 도달하세요", "영웅")
+	registerTitle("배신자", "같은 팀원을 5명 처치하세요", "희귀")
+	registerTitle("붉은 깃발", "RED팀을 선택하세요", "일반")
+	registerTitle("푸른 깃발", "BLUE팀을 선택하세요", "일반")
+	registerTitle("결정의 순간", "10레벨에 도달해 팀을 확정하세요", "일반")
+	registerTitle("탐험가", "모든 바이옴을 한 번씩 방문하세요", "희귀")
+	registerTitle("숲의 방랑자", "어두운 숲에서 몬스터 50마리를 처치하세요", "일반")
+	registerTitle("늪지의 생존자", "늪지에서 10레벨을 성장시키세요", "일반")
+	registerTitle("사막의 순례자", "사막을 5시간 이상 탐험하세요", "일반")
+	registerTitle("서리한", "눈덮인 타이가에서 정예 몬스터를 처치하세요", "희귀")
+	registerTitle("용암의 발자국", "네더에 최초로 입장하세요", "영웅")
+	registerTitle("종말을 목격한 자", "엔드에 최초로 입장하세요", "전설")
+	registerTitle("스탯의 화신", "스탯포인트를 총 500 소모하세요", "희귀")
+	registerTitle("완벽한 균형", "5가지 스탯을 각각 100 이상 투자하세요", "영웅")
+	registerTitle("행운의 아이", "크리티컬로 몬스터를 처치하세요", "일반")
+	registerTitle("종이 한 장 차이", "회피로 치명적인 공격을 10회 흘려내세요", "희귀")
+	registerTitle("대장장이의 벗", "장비 강화를 성공시키세요", "일반")
+	registerTitle("강화의 끝", "장비를 최대 단계까지 강화하세요", "영웅")
+	registerTitle("미식가", "신화 등급 요리를 제작하세요", "영웅")
+	registerTitle("유물 수집가", "고고학자 직업으로 유물을 10개 발굴하세요", "희귀")
+	registerTitle("모방의 달인", "모방자 직업으로 스킬을 20개 복사하세요", "영웅")
+	registerTitle("서버의 전설", "랭킹 GUI 레벨 순위 1위를 달성하세요", "전설")
+	broadcast "<gray>[시스템] 칭호 데이터 %size of {titledata::list::*}%종 로드 완료" to console
+
+# ------------------------------------------------------------------
+# 몬스터 처치 누적 칭호
+# ------------------------------------------------------------------
+function checkMonsterKillTitles(p: player):
+	set {_k} = {stats::%{_p}%::kills::normal} ? 0
+	if {_k} >= 100:
+		grantTitle({_p}, "학살자")
+	if {_k} >= 1000:
+		grantTitle({_p}, "살육자")
+	if {_k} >= 10000:
+		grantTitle({_p}, "멸종시키는 자")
+
+function checkEliteKillTitles(p: player):
+	if ({stats::%{_p}%::kills::elite} ? 0) >= 100:
+		grantTitle({_p}, "정예 사냥꾼")
+
+function checkGuardKillTitles(p: player):
+	if ({stats::%{_p}%::kills::guard} ? 0) >= 50:
+		grantTitle({_p}, "근위 파괴자")
+
+function checkBossKillTitles(p: player):
+	set {_k} = {stats::%{_p}%::kills::boss} ? 0
+	if {_k} >= 30:
+		grantTitle({_p}, "엘리트 킬러")
+	if {_k} >= 300:
+		grantTitle({_p}, "엘리트 학살자")
+
+# ------------------------------------------------------------------
+# 스탯 관련 칭호 (stats.sk 에서 포인트 분배시 호출)
+# ------------------------------------------------------------------
+function checkStatInvestTitles(p: player):
+	if ({stats::%{_p}%::statpointsspent} ? 0) >= 500:
+		grantTitle({_p}, "스탯의 화신")
+	if {stats::%{_p}%::str} >= 100 and {stats::%{_p}%::agi} >= 100 and {stats::%{_p}%::vit} >= 100 and {stats::%{_p}%::luck} >= 100 and {stats::%{_p}%::eva} >= 100:
+		grantTitle({_p}, "완벽한 균형")
+
+function checkCritKillTitle(p: player):
+	grantTitle({_p}, "행운의 아이")
+
+function checkEvasionTitle(p: player):
+	add 1 to {stats::%{_p}%::evasioncount}
+	if {stats::%{_p}%::evasioncount} >= 10:
+		grantTitle({_p}, "종이 한 장 차이")
+
+# ------------------------------------------------------------------
+# 칭호 GUI 열기 (7x5 그리드, 페이지 35개, 미보유는 실루엣)
+# ------------------------------------------------------------------
+function openTitleGUI(p: player, page: number):
+	open chest inventory with size 54 named "<dark_purple>칭호 - %{_page}%페이지" to {_p}
+	set {_start} = (({_page} - 1) * 35) + 1
+	set {_end} = {_start} + 34
+	set {_slot} = 0
+	loop {_end} - {_start} + 1 times:
+		set {_idx} = {_start} + {_slot}
+		if {_idx} <= size of {titledata::list::*}:
+			set {_name} = {titledata::list::%{_idx}%}
+			set {_grade} = {titledata::grade::%{_name}%}
+			set {_cond} = {titledata::condition::%{_name}%}
+			if hasTitle({_p}, {_name}) is true:
+				set {_item} = paper named "%colorForGrade({_grade})%%{_name}%"
+				if {_name} is {stats::%{_p}%::activetitle}:
+					enchant {_item} with unbreaking 1
+					set {_item} to {_item} with lore "<green>장착중" and "<gray>등급: %{_grade}%"
+				else:
+					set {_item} to {_item} with lore "<yellow>클릭하여 장착" and "<gray>등급: %{_grade}%"
+			else:
+				set {_item} = gray dye named "<dark_gray>???"
+				set {_item} to {_item} with lore "<gray>%{_cond}%" and "<dark_gray>등급: %{_grade}%"
+			set slot ({_slot}) of {_p}'s current inventory to {_item}
+		add 1 to {_slot}
+	if {_page} > 1:
+		set slot 45 of {_p}'s current inventory to arrow named "<yellow>이전 페이지"
+	if {_end} < size of {titledata::list::*}:
+		set slot 53 of {_p}'s current inventory to arrow named "<yellow>다음 페이지"
+	set slot 49 of {_p}'s current inventory to barrier named "<red>칭호 해제"
+	set {_p}'s metadata value "titlegui_page" to {_page}
+
+on inventory click:
+	if name of event-inventory contains "칭호 - ":
+		cancel event
+		set {_p} = player
+		set {_page} = {_p}'s metadata value "titlegui_page"
+		if clicked item is arrow named "<yellow>이전 페이지":
+			openTitleGUI({_p}, {_page} - 1)
+			stop
+		if clicked item is arrow named "<yellow>다음 페이지":
+			openTitleGUI({_p}, {_page} + 1)
+			stop
+		if clicked item is barrier named "<red>칭호 해제":
+			set {stats::%{_p}%::activetitle} to ""
+			updateDisplayName({_p})
+			close {_p}'s inventory
+			stop
+		if clicked item is not air:
+			set {_display} = display name of clicked item
+			loop {titledata::list::*}:
+				if "%{_display}%" contains loop-value:
+					if hasTitle({_p}, loop-value) is true:
+						set {stats::%{_p}%::activetitle} to loop-value
+						updateDisplayName({_p})
+						send "<green>칭호 [%loop-value%] 을(를) 장착했습니다." to {_p}
+						openTitleGUI({_p}, {_page})
+					stop loop

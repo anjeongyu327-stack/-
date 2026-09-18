@@ -1,0 +1,107 @@
+########################################################################
+# 12_monsters_boss.sk — 엘리트 몬스터 4종 (서버 상징급 네임드, [엘리트] 접두사)
+#
+# 필요 애드온: 없음
+#
+# 사용 변수: {bossdata::*}, {mobinstance::%uuid%::*} (10_monsters_normal.sk 와 공유)
+#
+# 훅: trySpawnBoss(entity, region, base) 는 10_monsters_normal.sk 의 스폰 디스패치
+#     캐스케이드에서 가장 먼저(0.3% 굴림) 호출된다. 지역 제한 없이 "대상 몬스터 종류"만
+#     일치하면 스폰 가능 (원문 스폰 조건에 지역명이 없음).
+#     처치 보상은 rewardBossKill() 이 처리하며, 10_monsters_normal.sk 의 단일 on death
+#     핸들러에서 tier="BOSS" 로 분기되어 호출된다.
+########################################################################
+
+function registerBoss(id: text, name: text, base: text, hp: number, dmg: number, level: number, dropitem: text, dropchance: number, goldmin: number, goldmax: number):
+	add {_id} to {bossdata::list::*}
+	set {bossdata::name::%{_id}%} to {_name}
+	set {bossdata::base::%{_id}%} to {_base}
+	set {bossdata::hp::%{_id}%} to {_hp}
+	set {bossdata::dmg::%{_id}%} to {_dmg}
+	set {bossdata::level::%{_id}%} to {_level}
+	set {bossdata::dropitem::%{_id}%} to {_dropitem}
+	set {bossdata::dropchance::%{_id}%} to {_dropchance}
+	set {bossdata::goldmin::%{_id}%} to {_goldmin}
+	set {bossdata::goldmax::%{_id}%} to {_goldmax}
+
+on script load:
+	delete {bossdata::list::*}
+	registerBoss("paladin",  "썩어가는 성기사",   "ZOMBIE",          150,  10,  1,  "낡은 성기사단의 검", 8,  80,   120)
+	registerBoss("archbishop", "곪아버린 대주교", "ZOMBIE_VILLAGER", 340,  32,  21, "부패한 성물",        8,  260,  340)
+	registerBoss("sentinel", "불타오르는 파수병", "BLAZE_OR_PIGLIN", 1050, 120, 56, "화염 정수 방패",     10, 900,  1200)
+	registerBoss("watcher",  "종말의 감시자",     "ENDERMAN",        2600, 280, 96, "종말의 인장",        10, 4500, 6000)
+	broadcast "<gray>[시스템] 엘리트(네임드) 몬스터 4종 로드 완료" to console
+
+function bossMatchesBase(bossid: text, base: text) :: boolean:
+	set {_bbase} = {bossdata::base::%{_bossid}%}
+	if {_bbase} is {_base}:
+		return true
+	if {_bbase} is "BLAZE_OR_PIGLIN" and ({_base} is "BLAZE" or {_base} is "PIGLIN"):
+		return true
+	return false
+
+function trySpawnBoss(e: entity, region: text, base: text) :: boolean:
+	loop {bossdata::list::*}:
+		if bossMatchesBase(loop-value, {_base}) is true:
+			set {_id} = loop-value
+			set {_hp} = {bossdata::hp::%{_id}%}
+			set {_dmg} = {bossdata::dmg::%{_id}%}
+			set {_lvl} = {bossdata::level::%{_id}%}
+			set {_bname} = {bossdata::name::%{_id}%}
+			set the max health of {_e} to {_hp}
+			heal {_e} by {_hp}
+			set the attack damage of {_e} to {_dmg}
+			set name of {_e} to "<dark_red><bold>[엘리트]<gray>(Lv.%{_lvl}% %{_bname}%)"
+			set {_uuid} = "%uuid of {_e}%"
+			set {mobinstance::%{_uuid}%::tier} to "BOSS"
+			set {mobinstance::%{_uuid}%::bossid} to {_id}
+			set {mobinstance::%{_uuid}%::level} to {_lvl}
+			set {mobinstance::%{_uuid}%::dropitem} to {bossdata::dropitem::%{_id}%}
+			set {mobinstance::%{_uuid}%::dropchance} to {bossdata::dropchance::%{_id}%}
+			set {mobinstance::%{_uuid}%::goldmin} to {bossdata::goldmin::%{_id}%}
+			set {mobinstance::%{_uuid}%::goldmax} to {bossdata::goldmax::%{_id}%}
+			broadcast "<dark_red><bold>[엘리트 출현]<reset> <gray>%{_bname}%(Lv.%{_lvl}%)이(가) 나타났습니다!"
+			return true
+	return false
+
+function rewardBossKill(p: player, uuid: text, deathloc: location):
+	set {_lvl} = {mobinstance::%{_uuid}%::level}
+	set {_exp} = getBossTierExp({_lvl})
+	handleMonsterKillReward({_p}, {_lvl}, {_exp}, {mobinstance::%{_uuid}%::goldmin}, {mobinstance::%{_uuid}%::goldmax}, {mobinstance::%{_uuid}%::dropitem}, {mobinstance::%{_uuid}%::dropchance})
+	add 1 to {stats::%{_p}%::kills::boss}
+	checkBossKillTitles({_p})
+	if {lastcrit::%{_p}%} is true:
+		checkCritKillTitle({_p})
+	broadcast "<dark_red><bold>[엘리트 처치]<reset> <yellow>%{_p}%<gray>님이 엘리트 몬스터를 처치했습니다!"
+	if {mobinstance::%{_uuid}%::bossid} is "watcher":
+		create explosion of force 0 at {_deathloc}
+		loop all players in world of {_p}:
+			if distanceBetween(location of loop-player, {_deathloc}) <= 3:
+				damage loop-player by 40
+
+########################################################################
+# 엘리트 개별 특성 (실명 15% / 자힐 5% 3초마다 / 화상 30% / 사망시 폭발)
+########################################################################
+on damage:
+	if attacker is a monster:
+		set {_uuid} = "%uuid of attacker%"
+		if {mobinstance::%{_uuid}%::tier} is "BOSS":
+			set {_bossid} = {mobinstance::%{_uuid}%::bossid}
+			if {_bossid} is "paladin":
+				if random number between 0.0 and 1.0 <= 0.15:
+					apply potion effect of blindness to victim for 40 ticks
+			else if {_bossid} is "sentinel":
+				if random number between 0.0 and 1.0 <= 0.3:
+					ignite victim for 3 seconds
+
+every 3 seconds:
+	loop all entities:
+		if loop-entity is a monster:
+			set {_uuid} = "%uuid of loop-entity%"
+			if {mobinstance::%{_uuid}%::bossid} is "archbishop":
+				if health of loop-entity < max health of loop-entity:
+					heal loop-entity by (max health of loop-entity * 0.05)
+
+# 주의: "종말의 감시자"의 사망시 폭발은 10_monsters_normal.sk 의 단일 on death 핸들러가
+# mobinstance 데이터를 삭제하기 "전"에 rewardBossKill() 을 통해 호출해야 하므로,
+# 별도의 on death 핸들러를 두지 않고 rewardBossKill() 안에서 직접 처리한다.

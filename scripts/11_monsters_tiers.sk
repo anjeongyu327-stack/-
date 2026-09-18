@@ -1,0 +1,84 @@
+########################################################################
+# 11_monsters_tiers.sk — 정예(2배) / 근위(체력4배·공격2.5배) 등급 오버레이
+#
+# 필요 애드온: 없음
+#
+# 설계: 10_monsters_normal.sk 에서 생성한 100종 일반 몬스터 정의를 그대로 재사용하고,
+#       스탯 배율과 이름표 접두사만 다르게 적용한다 (배타적 스폰은 10_monsters_normal.sk 의
+#       단일 굴림 캐스케이드에서 보장됨).
+#       드롭 확률은 정예 +10%p, 근위 +20%p / 골드는 정예 x2, 근위 x3 로 AI가 임의 보정하였음
+#       (원문에 정예·근위 전용 골드/드롭 수치가 명시되어 있지 않음).
+#
+# 사용 변수: {mobinstance::%uuid%::*} (10_monsters_normal.sk 와 동일 구조 공유)
+#
+# 훅: trySpawnElite(entity, region, base) / trySpawnGuard(entity, region, base) 는
+#     10_monsters_normal.sk 의 스폰 디스패치에서 호출된다.
+#     처치 보상은 이 파일의 on death 핸들러가 독립적으로 처리한다.
+########################################################################
+
+function trySpawnElite(e: entity, region: text, base: text) :: boolean:
+	set {_id} = pickNormalId({_region}, {_base})
+	if {_id} = -1:
+		return false
+	set {_hp} = {mobdef::normal::%{_id}%::hp} * 2
+	set {_dmg} = {mobdef::normal::%{_id}%::dmg} * 2
+	set {_lvl} = {mobdef::normal::%{_id}%::level}
+	set {_mname} = {mobdef::normal::%{_id}%::name}
+	set the max health of {_e} to {_hp}
+	heal {_e} by {_hp}
+	set the attack damage of {_e} to {_dmg}
+	set name of {_e} to "<blue>[정예]<gray>(Lv.%{_lvl}% %{_mname}%)"
+	set {_uuid} = "%uuid of {_e}%"
+	set {mobinstance::%{_uuid}%::tier} to "ELITE"
+	set {mobinstance::%{_uuid}%::defid} to {_id}
+	set {mobinstance::%{_uuid}%::level} to {_lvl}
+	set {mobinstance::%{_uuid}%::dropitem} to {mobdef::normal::%{_id}%::dropitem}
+	set {mobinstance::%{_uuid}%::dropchance} to ({mobdef::normal::%{_id}%::dropchance} + 10)
+	set {mobinstance::%{_uuid}%::goldmin} to ({mobdef::normal::%{_id}%::goldmin} * 2)
+	set {mobinstance::%{_uuid}%::goldmax} to ({mobdef::normal::%{_id}%::goldmax} * 2)
+	set {mobinstance::%{_uuid}%::trait} to {mobdef::normal::%{_id}%::trait}
+	set {mobinstance::%{_uuid}%::region} to {_region}
+	return true
+
+function trySpawnGuard(e: entity, region: text, base: text) :: boolean:
+	set {_id} = pickNormalId({_region}, {_base})
+	if {_id} = -1:
+		return false
+	set {_hp} = {mobdef::normal::%{_id}%::hp} * 4
+	set {_dmg} = {mobdef::normal::%{_id}%::dmg} * 2.5
+	set {_lvl} = {mobdef::normal::%{_id}%::level}
+	set {_mname} = {mobdef::normal::%{_id}%::name}
+	set the max health of {_e} to {_hp}
+	heal {_e} by {_hp}
+	set the attack damage of {_e} to {_dmg}
+	set name of {_e} to "<dark_purple>[근위]<gray>(Lv.%{_lvl}% %{_mname}%)"
+	set {_uuid} = "%uuid of {_e}%"
+	set {mobinstance::%{_uuid}%::tier} to "GUARD"
+	set {mobinstance::%{_uuid}%::defid} to {_id}
+	set {mobinstance::%{_uuid}%::level} to {_lvl}
+	set {mobinstance::%{_uuid}%::dropitem} to {mobdef::normal::%{_id}%::dropitem}
+	set {mobinstance::%{_uuid}%::dropchance} to ({mobdef::normal::%{_id}%::dropchance} + 20)
+	set {mobinstance::%{_uuid}%::goldmin} to ({mobdef::normal::%{_id}%::goldmin} * 3)
+	set {mobinstance::%{_uuid}%::goldmax} to ({mobdef::normal::%{_id}%::goldmax} * 3)
+	set {mobinstance::%{_uuid}%::trait} to {mobdef::normal::%{_id}%::trait}
+	return true
+
+# 처치 보상 처리는 10_monsters_normal.sk 의 단일 on death 핸들러가 tier 를 분기하여
+# 아래 함수를 호출한다 (여러 파일에서 on death 핸들러를 중복 등록하면 delete 순서 문제로
+# 데이터가 먼저 삭제되어 근위/정예 보상이 누락될 수 있으므로 반드시 단일 핸들러로 통합한다).
+function rewardEliteOrGuardKill(p: player, uuid: text, tier: text):
+	if {_tier} is "ELITE":
+		set {_exp} = getEliteTierExp({mobinstance::%{_uuid}%::level})
+	else:
+		set {_exp} = getGuardTierExp({mobinstance::%{_uuid}%::level})
+	handleMonsterKillReward({_p}, {mobinstance::%{_uuid}%::level}, {_exp}, {mobinstance::%{_uuid}%::goldmin}, {mobinstance::%{_uuid}%::goldmax}, {mobinstance::%{_uuid}%::dropitem}, {mobinstance::%{_uuid}%::dropchance})
+	if {_tier} is "ELITE":
+		add 1 to {stats::%{_p}%::kills::elite}
+		checkEliteKillTitles({_p})
+		if {mobinstance::%{_uuid}%::region} is "SNOWY_TAIGA":
+			grantTitle({_p}, "서리한")
+	else:
+		add 1 to {stats::%{_p}%::kills::guard}
+		checkGuardKillTitles({_p})
+	if {lastcrit::%{_p}%} is true:
+		checkCritKillTitle({_p})

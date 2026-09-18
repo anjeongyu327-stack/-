@@ -1,0 +1,70 @@
+########################################################################
+# 01_level.sk — 커스텀 레벨/경험치 시스템
+#
+# 필요 애드온: 없음 (순수 Skript)
+#
+# 사용 변수:
+#   {stats::%player%::level}  - 1~100
+#   {stats::%player%::exp}    - 현재 레벨 진행 경험치
+#   {stats::%player%::statpoints} - 레벨업시 +5 지급
+#
+# 훅 / 의존관계:
+#   - monsters_normal.sk / monsters_tiers.sk / monsters_boss.sk 가 처치시
+#     addExp(player, amount) 함수를 호출한다.
+#   - 레벨업시 00_core.sk 의 updateDisplayName(), grantTitle() 을 호출한다.
+#   - titles.sk 가 레벨 도달 칭호(초보 모험가 등)를 이 파일의 addExp/levelUp 흐름에서 트리거받는다.
+########################################################################
+
+# 1~89 구간: 100 + (레벨*50) + (레벨^2*20)
+# 90~100 구간: 고정값 표
+#   90->91: 500,000   91->92: 500,000   92->93: 500,000
+#   93->94: 500,000   94->95: 500,000   (90~95 합계 2,500,000)
+#   95->96: 600,000   96->97: 600,000   97->98: 600,000
+#   98->99: 600,000   99->100: 600,000  (95~100 합계 3,000,000)
+function getExpToNextLevel(lvl: number) :: number:
+	if {_lvl} >= 100:
+		return 999999999
+	else if {_lvl} >= 95:
+		return 600000
+	else if {_lvl} >= 90:
+		return 500000
+	else:
+		return (100 + ({_lvl} * 50) + (({_lvl} * {_lvl}) * 20))
+
+function addExp(p: player, amount: number):
+	if {stats::%{_p}%::level} >= 100:
+		stop
+	if {_amount} <= 0:
+		stop
+	set {stats::%{_p}%::exp} to ({stats::%{_p}%::exp} ? 0) + {_amount}
+	send "<aqua>+%{_amount}% EXP" to {_p}
+	while {stats::%{_p}%::level} < 100 and {stats::%{_p}%::exp} >= getExpToNextLevel({stats::%{_p}%::level}):
+		set {_need} = getExpToNextLevel({stats::%{_p}%::level})
+		set {stats::%{_p}%::exp} to {stats::%{_p}%::exp} - {_need}
+		levelUp({_p})
+
+function levelUp(p: player):
+	add 1 to {stats::%{_p}%::level}
+	add 5 to {stats::%{_p}%::statpoints}
+	set {_lvl} = {stats::%{_p}%::level}
+	send "<gold><bold>[레벨업]<reset> <yellow>%{_p}%<reset>님이 <gold>Lv.%{_lvl}%<reset> 이(가) 되었습니다! <gray>(스탯포인트 +5)" to all players
+	play sound "entity.player.levelup" at {_p} with volume 1 for {_p}
+	updateDisplayName({_p})
+	checkLevelTitles({_p}, {_lvl})
+	checkTeamLock({_p}, {_lvl})
+	refreshSkillSlots({_p})
+
+function checkLevelTitles(p: player, lvl: number):
+	if {_lvl} >= 5:
+		grantTitle({_p}, "초보 모험가")
+	if {_lvl} >= 10:
+		grantTitle({_p}, "성장하는 자")
+	if {_lvl} >= 25:
+		grantTitle({_p}, "숙련자")
+	if {_lvl} >= 50:
+		grantTitle({_p}, "베테랑")
+	if {_lvl} >= 75:
+		grantTitle({_p}, "전설의 시작")
+	if {_lvl} >= 100:
+		grantTitle({_p}, "정점에 선 자")
+	# "서버의 전설"(랭킹 1위) 칭호는 gui.sk 의 랭킹 갱신 루틴(refreshLevelRanking)에서 부여된다.

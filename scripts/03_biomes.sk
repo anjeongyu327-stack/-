@@ -1,0 +1,133 @@
+########################################################################
+# 03_biomes.sk — 바이옴 적정 레벨 안내 + 바이옴→지역 태그 매핑 + 탐험 칭호
+#
+# 필요 애드온: 없음
+#
+# 사용 변수:
+#   {biomedata::minlevel::%region%}   - 지역 태그별 권장 최소 레벨
+#   {stats::%player%::lastbiome}      - 마지막으로 안내받은 바이옴(중복 메세지 방지)
+#   {stats::%player%::visitedbiome::%region%} - 방문 여부 (탐험가 칭호)
+#   {stats::%player%::darkforestkills}, {stats::%player%::swamplevel_start} 등
+#
+# 훅 / 의존관계:
+#   - getRegionTag(biome) : 실제 마인크래프트 바이옴을 문서의 13개 "지역"으로 매핑.
+#     monsters_normal.sk / monsters_tiers.sk / monsters_boss.sk 가 스폰 판정에 사용.
+#   - on biome change(이동 감지, 1초마다 위치 체크)로 적정 레벨 메세지 출력.
+#   - dimensions.sk 가 이 파일의 getRegionTag 를 참고하지는 않지만 같은 파일 그룹으로 관리.
+########################################################################
+
+on script load:
+	set {biomedata::minlevel::PLAINS} to 1
+	set {biomedata::minlevel::FOREST} to 3
+	set {biomedata::minlevel::DARK_FOREST} to 5
+	set {biomedata::minlevel::CAVE} to 12
+	set {biomedata::minlevel::SWAMP} to 20
+	set {biomedata::minlevel::JUNGLE} to 28
+	set {biomedata::minlevel::DESERT} to 35
+	set {biomedata::minlevel::MUSHROOM} to 42
+	set {biomedata::minlevel::MOUNTAINS} to 48
+	set {biomedata::minlevel::SNOWY_TAIGA} to 50
+	set {biomedata::minlevel::ICE_PLAINS} to 65
+	set {biomedata::minlevel::NETHER_BORDER} to 78
+	set {biomedata::minlevel::END_BORDER} to 88
+	set {biomedata::regionname::PLAINS} to "평야"
+	set {biomedata::regionname::FOREST} to "숲"
+	set {biomedata::regionname::DARK_FOREST} to "어두운 숲"
+	set {biomedata::regionname::CAVE} to "동굴"
+	set {biomedata::regionname::SWAMP} to "늪지"
+	set {biomedata::regionname::JUNGLE} to "정글"
+	set {biomedata::regionname::DESERT} to "사막"
+	set {biomedata::regionname::MUSHROOM} to "버섯섬"
+	set {biomedata::regionname::MOUNTAINS} to "산맥"
+	set {biomedata::regionname::SNOWY_TAIGA} to "눈덮인 타이가"
+	set {biomedata::regionname::ICE_PLAINS} to "얼음 평원"
+	set {biomedata::regionname::NETHER_BORDER} to "네더 인접지역"
+	set {biomedata::regionname::END_BORDER} to "엔드 인접지역"
+
+# 실제 바이옴을 문서상의 13개 지역 태그로 매핑 (지하 30 이하는 동굴로 취급)
+function getRegionTag(loc: location) :: text:
+	set {_biome} = biome at {_loc}
+	if world of {_loc} is "world_nether":
+		return "NETHER_BORDER"
+	if world of {_loc} is "world_the_end":
+		return "END_BORDER"
+	if y of {_loc} < 40:
+		return "CAVE"
+	if "%{_biome}%" contains "DARK_FOREST":
+		return "DARK_FOREST"
+	if "%{_biome}%" contains "FOREST":
+		return "FOREST"
+	if "%{_biome}%" contains "SWAMP":
+		return "SWAMP"
+	if "%{_biome}%" contains "JUNGLE":
+		return "JUNGLE"
+	if "%{_biome}%" contains "DESERT":
+		return "DESERT"
+	if "%{_biome}%" contains "MUSHROOM":
+		return "MUSHROOM"
+	if "%{_biome}%" contains "SNOWY_TAIGA" or "%{_biome}%" contains "ICE_SPIKES":
+		return "SNOWY_TAIGA"
+	if "%{_biome}%" contains "FROZEN" or "%{_biome}%" contains "SNOWY":
+		return "ICE_PLAINS"
+	if "%{_biome}%" contains "MOUNTAIN" or "%{_biome}%" contains "PEAK" or "%{_biome}%" contains "HILLS":
+		return "MOUNTAINS"
+	if "%{_biome}%" contains "PLAINS":
+		return "PLAINS"
+	return "PLAINS"
+
+# 1초마다 이동중인 플레이어의 지역 변화를 감지해 권장 레벨 안내
+every 1 second:
+	loop all players:
+		set {_region} = getRegionTag(location of loop-player)
+		if {_region} is not {stats::%loop-player%::lastbiome}:
+			set {stats::%loop-player%::lastbiome} to {_region}
+			set {_min} = {biomedata::minlevel::%{_region}%}
+			set {_name} = {biomedata::regionname::%{_region}%}
+			send action bar "<green>[%{_name}%]<reset> <gray>권장 레벨: <yellow>%{_min}%Lv 이상" to loop-player
+			if {stats::%loop-player%::visitedbiome::%{_region}%} is not true:
+				set {stats::%loop-player%::visitedbiome::%{_region}%} to true
+				checkExplorerTitle(loop-player)
+			if {_region} is "SWAMP" and {stats::%loop-player%::swamp_startlevel} is not set:
+				set {stats::%loop-player%::swamp_startlevel} to {stats::%loop-player%::level}
+		if {_region} is "DESERT":
+			add 1 to {stats::%loop-player%::desertticks}
+			if ({stats::%loop-player%::desertticks} ? 0) >= 18000:
+				grantTitle(loop-player, "사막의 순례자")
+		if {_region} is "SWAMP" and {stats::%loop-player%::swamp_startlevel} is set:
+			if {stats::%loop-player%::level} - {stats::%loop-player%::swamp_startlevel} >= 10:
+				grantTitle(loop-player, "늪지의 생존자")
+
+function checkExplorerTitle(p: player):
+	set {_all} = 13
+	set {_count} = 0
+	loop {biomedata::regionname::*}:
+		if {stats::%{_p}%::visitedbiome::%loop-index%} is true:
+			add 1 to {_count}
+	if {_count} >= {_all}:
+		grantTitle({_p}, "탐험가")
+
+# 네더/엔드 최초 입장 칭호 (서버 최초 1명만 각각 획득 — dimensions.sk 의 포탈 통과 이벤트에서 호출)
+function tryFirstNetherTitle(p: player):
+	if {server::firstnether} is not set:
+		set {server::firstnether} to "%{_p}%"
+		grantTitle({_p}, "용암의 발자국")
+		broadcast "<gold>[서버 최초] %{_p}%님이 네더에 최초로 입장했습니다!"
+
+function tryFirstEndTitle(p: player):
+	if {server::firstend} is not set:
+		set {server::firstend} to "%{_p}%"
+		grantTitle({_p}, "종말을 목격한 자")
+		broadcast "<gold>[서버 최초] %{_p}%님이 엔드에 최초로 입장했습니다!"
+
+# 어두운 숲에서 몬스터 처치 카운트 (monsters_normal.sk 에서 호출)
+function checkDarkForestKillTitle(p: player, region: text):
+	if {_region} is "DARK_FOREST":
+		add 1 to {stats::%{_p}%::darkforestkills}
+		if ({stats::%{_p}%::darkforestkills} ? 0) >= 50:
+			grantTitle({_p}, "숲의 방랑자")
+
+command /전직장소 <text>:
+	description: 현재 서있는 위치를 해당 직업 전직 장소로 등록 (jobs.sk)
+	permission: op
+	trigger:
+		registerJobLocation(player, arg-1, location of player)

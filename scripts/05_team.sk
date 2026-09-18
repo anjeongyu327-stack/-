@@ -1,0 +1,105 @@
+########################################################################
+# 05_team.sk — 팀 시스템 (RED/BLUE/팀X) + 10Lv 강제 선택
+#
+# 필요 애드온: 없음
+#
+# 사용 변수:
+#   {stats::%player%::team}       - "RED" / "BLUE" / "NONE"(팀X)
+#   {stats::%player%::teamlocked} - 10Lv 강제선택 완료 여부
+#
+# 훅 / 의존관계:
+#   - 00_core.sk 의 on join 최초접속 블록에서 openTeamChoiceGUI(player) 호출.
+#   - 01_level.sk 의 levelUp() 에서 checkTeamLock(player, level) 호출 (10Lv 도달시 강제선택창).
+#   - pk.sk 가 isEnemyTeam(attacker, victim) 함수를 참조해 카르마 증가 여부를 판단한다.
+########################################################################
+
+function openTeamChoiceGUI(p: player):
+	open chest inventory with size 27 named "<gold>팀 선택" to {_p}
+	set slot 11 of {_p}'s current inventory to red wool named "<red><bold>RED팀"
+	set slot 15 of {_p}'s current inventory to blue wool named "<blue><bold>BLUE팀"
+	set slot 13 of {_p}'s current inventory to white wool named "<gray><bold>팀 없음 (팀X)"
+
+function openTeamLockGUI(p: player):
+	open chest inventory with size 27 named "<gold>팀 확정 (필수)" to {_p}
+	set slot 11 of {_p}'s current inventory to red wool named "<red><bold>RED팀으로 확정"
+	set slot 15 of {_p}'s current inventory to blue wool named "<blue><bold>BLUE팀으로 확정"
+
+on inventory click:
+	if name of event-inventory is "<gold>팀 선택":
+		cancel event
+		set {_p} = player
+		if clicked item is red wool:
+			set {stats::%{_p}%::team} to "RED"
+			grantTitle({_p}, "붉은 깃발")
+			send "<red>RED팀을 선택했습니다." to {_p}
+			close {_p}'s inventory
+		else if clicked item is blue wool:
+			set {stats::%{_p}%::team} to "BLUE"
+			grantTitle({_p}, "푸른 깃발")
+			send "<blue>BLUE팀을 선택했습니다." to {_p}
+			close {_p}'s inventory
+		else if clicked item is white wool:
+			set {stats::%{_p}%::team} to "NONE"
+			send "<gray>팀에 소속되지 않았습니다. (10레벨 달성시 RED/BLUE 중 하나를 확정해야 합니다)" to {_p}
+			close {_p}'s inventory
+
+	if name of event-inventory is "<gold>팀 확정 (필수)":
+		cancel event
+		set {_p} = player
+		if clicked item is red wool:
+			set {stats::%{_p}%::team} to "RED"
+			set {stats::%{_p}%::teamlocked} to true
+			grantTitle({_p}, "붉은 깃발")
+			grantTitle({_p}, "결정의 순간")
+			send "<red>RED팀으로 확정되었습니다." to {_p}
+			close {_p}'s inventory
+		else if clicked item is blue wool:
+			set {stats::%{_p}%::team} to "BLUE"
+			set {stats::%{_p}%::teamlocked} to true
+			grantTitle({_p}, "푸른 깃발")
+			grantTitle({_p}, "결정의 순간")
+			send "<blue>BLUE팀으로 확정되었습니다." to {_p}
+			close {_p}'s inventory
+
+on inventory close:
+	if name of event-inventory is "<gold>팀 확정 (필수)":
+		if {stats::%player%::teamlocked} is not true:
+			wait 2 ticks
+			openTeamLockGUI(player)
+
+# 10레벨 도달시 팀X 였다면 강제 선택 (level.sk 의 levelUp()에서 호출)
+function checkTeamLock(p: player, lvl: number):
+	if {_lvl} >= 10:
+		if {stats::%{_p}%::team} is "NONE" and {stats::%{_p}%::teamlocked} is not true:
+			send "<gold>[팀 시스템] 10레벨에 도달했습니다! RED/BLUE 팀 중 하나를 확정해야 합니다." to {_p}
+			openTeamLockGUI({_p})
+		else:
+			set {stats::%{_p}%::teamlocked} to true
+
+# 두 플레이어가 서로 "적팀"인지 여부. 팀X 는 초반(10레벨 미만)에는 모두와 아군 취급되어
+# 아무도 죽일 수 없는 중립으로 처리하고, teamlocked 이후에는 이 함수를 타지 않는다(팀X 자체가 사라짐).
+function isEnemyTeam(a: player, b: player) :: boolean:
+	set {_ta} = {stats::%{_a}%::team}
+	set {_tb} = {stats::%{_b}%::team}
+	if {_ta} is "NONE" or {_tb} is "NONE":
+		return false
+	if {_ta} is {_tb}:
+		return false
+	return true
+
+function isSameTeam(a: player, b: player) :: boolean:
+	set {_ta} = {stats::%{_a}%::team}
+	set {_tb} = {stats::%{_b}%::team}
+	if {_ta} is "NONE" or {_tb} is "NONE":
+		return false
+	if {_ta} is {_tb}:
+		return true
+	return false
+
+# 팀X 유저는 그 누구도 죽일 수 없다 (중립 보호)
+on damage of player:
+	if attacker is a player:
+		if {stats::%attacker%::team} is "NONE" or {stats::%victim%::team} is "NONE":
+			if {stats::%attacker%::teamlocked} is not true or {stats::%victim%::teamlocked} is not true:
+				cancel event
+				send "<gray>팀이 없는 플레이어는 PvP를 할 수 없습니다." to attacker

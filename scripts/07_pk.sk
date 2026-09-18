@@ -1,0 +1,147 @@
+########################################################################
+# 07_pk.sk — PK(플레이어 킬) / 카르마 / 현상금 시스템
+#
+# 필요 애드온: 없음
+#
+# 사용 변수:
+#   {stats::%player%::karma}                - 카르마 (0~10)
+#   {stats::%player%::teamkilllist::%victim%} - 처치한 아군 명단 (배신자 칭호용)
+#   {stats::%player%::teamkillcount}        - 처치한 아군 수
+#   {bountylist::*}                         - 카르마 2 이상인 플레이어 명단 (gui.sk 현상금 GUI 가 참조)
+#   {jobtooldata::%job%}                    - 직업별 전용 도구 아이템 이름 (드롭 제외 대상, jobs.sk 에서 등록)
+#
+# 훅 / 의존관계:
+#   - on death of player: 전투 손실(경험치/아이템 전부 드롭) + 카르마 증가 + 현상금 보상 처리
+#   - 05_team.sk 의 isSameTeam / isEnemyTeam 참조
+#   - 01_level.sk 의 addExp 참조 (처치 보상 경험치)
+#   - 00_core.sk 의 updateDisplayName (카르마 2 이상 적색 닉네임) 참조
+########################################################################
+
+on script load:
+	set {karmadata::debuff::1} to "hunger:0"
+	set {karmadata::debuff::3} to "hunger:0,slowness:0"
+	set {karmadata::debuff::5} to "hunger:1,slowness:0,weakness:0"
+	set {karmadata::debuff::7} to "hunger:1,slowness:1,weakness:0"
+	set {karmadata::debuff::9} to "hunger:2,slowness:1,weakness:1,mining_fatigue:0"
+	set {karmadata::debuff::10} to "hunger:2,slowness:2,weakness:1,mining_fatigue:1"
+
+function applyKarmaDebuff(p: player):
+	set {_k} = {stats::%{_p}%::karma} ? 0
+	set {_tier} = 0
+	if {_k} >= 10:
+		set {_tier} = 10
+	else if {_k} >= 9:
+		set {_tier} = 9
+	else if {_k} >= 7:
+		set {_tier} = 7
+	else if {_k} >= 5:
+		set {_tier} = 5
+	else if {_k} >= 3:
+		set {_tier} = 3
+	else if {_k} >= 1:
+		set {_tier} = 1
+	remove hunger from {_p}
+	remove slowness from {_p}
+	remove weakness from {_p}
+	remove mining fatigue from {_p}
+	if {_tier} > 0:
+		set {_str} = {karmadata::debuff::%{_tier}%}
+		if "%{_str}%" contains "hunger:0":
+			apply potion effect of hunger of tier 1 to {_p} for 999999 seconds without particles
+		if "%{_str}%" contains "hunger:1":
+			apply potion effect of hunger of tier 2 to {_p} for 999999 seconds without particles
+		if "%{_str}%" contains "hunger:2":
+			apply potion effect of hunger of tier 3 to {_p} for 999999 seconds without particles
+		if "%{_str}%" contains "slowness:0":
+			apply potion effect of slowness of tier 1 to {_p} for 999999 seconds without particles
+		if "%{_str}%" contains "slowness:1":
+			apply potion effect of slowness of tier 2 to {_p} for 999999 seconds without particles
+		if "%{_str}%" contains "slowness:2":
+			apply potion effect of slowness of tier 3 to {_p} for 999999 seconds without particles
+		if "%{_str}%" contains "weakness:0":
+			apply potion effect of weakness of tier 1 to {_p} for 999999 seconds without particles
+		if "%{_str}%" contains "weakness:1":
+			apply potion effect of weakness of tier 2 to {_p} for 999999 seconds without particles
+		if "%{_str}%" contains "mining_fatigue:0":
+			apply potion effect of mining fatigue of tier 1 to {_p} for 999999 seconds without particles
+		if "%{_str}%" contains "mining_fatigue:1":
+			apply potion effect of mining fatigue of tier 2 to {_p} for 999999 seconds without particles
+
+function addKarma(p: player, amount: number):
+	set {_k} = ({stats::%{_p}%::karma} ? 0) + {_amount}
+	if {_k} > 10:
+		set {_k} = 10
+	if {_k} < 0:
+		set {_k} = 0
+	set {stats::%{_p}%::karma} to {_k}
+	updateBountyList({_p})
+	applyKarmaDebuff({_p})
+	updateDisplayName({_p})
+	if {_k} >= 2:
+		grantTitle({_p}, "수배자")
+	if {_k} >= 10:
+		grantTitle({_p}, "악명 높은 자")
+
+function updateBountyList(p: player):
+	set {_k} = {stats::%{_p}%::karma} ? 0
+	if {_k} >= 2:
+		if "%{_p}%" is not in {bountylist::*}:
+			add "%{_p}%" to {bountylist::*}
+	else:
+		remove "%{_p}%" from {bountylist::*}
+
+function isJobToolItem(p: player, item: item) :: boolean:
+	set {_job} = {stats::%{_p}%::job}
+	set {_tool} = {jobtooldata::%{_job}%}
+	if {_tool} is not set or {_tool} is "":
+		return false
+	if display name of {_item} is "%{_tool}%":
+		return true
+	return false
+
+on death of a player:
+	if attacker of event is a player:
+		set {_a} = attacker of event
+		set {_v} = victim
+		set {_wasbounty} = false
+		if ({stats::%{_v}%::karma} ? 0) >= 2:
+			set {_wasbounty} = true
+
+		# 약탈자 "약탈 페널티 제거" 패시브: 같은 팀 처치에 대한 카르마 증가를 받지 않는다
+		set {_nopenalty} = false
+		if {stats::%{_a}%::job} is "약탈자" and hasSkillUnlocked({_a}, "약탈 페널티 제거") is true:
+			set {_nopenalty} = true
+
+		# 같은 팀원 처치 -> 카르마 증가 + 배신자 칭호 카운트
+		if isSameTeam({_a}, {_v}) is true and {_nopenalty} is false:
+			addKarma({_a}, 1)
+			if {stats::%{_a}%::teamkilllist::%{_v}%} is not true:
+				set {stats::%{_a}%::teamkilllist::%{_v}%} to true
+				add 1 to {stats::%{_a}%::teamkillcount}
+				if {stats::%{_a}%::teamkillcount} >= 5:
+					grantTitle({_a}, "배신자")
+
+		# 같은 팀 또는 적팀 유저 사망 -> 경험치 전부 드롭(레벨 유지) + 아이템 전부 드롭(직업 전용 도구 제외)
+		if isSameTeam({_a}, {_v}) is true or isEnemyTeam({_a}, {_v}) is true:
+			set {_lostexp} = {stats::%{_v}%::exp} ? 0
+			set {stats::%{_v}%::exp} to 0
+			if {_lostexp} > 0:
+				addExp({_a}, {_lostexp} / 2)
+				if {stats::%{_a}%::job} is "약탈자" and hasSkillUnlocked({_a}, "경험치소매치기") is true:
+					addExp({_a}, {_lostexp} * 0.05)
+				send "<red>PK로 인해 경험치 %{_lostexp}%을(를) 모두 잃었습니다. (레벨은 유지됩니다)" to {_v}
+			if {stats::%{_a}%::job} is "약탈자" and hasSkillUnlocked({_a}, "골드탈취") is true:
+				addGold({_a}, (({stats::%{_v}%::gold} ? 0) * 0.10))
+			loop drops:
+				if isJobToolItem({_v}, loop-item) is true:
+					remove loop-item from drops
+
+			# 현상금 처치 보상
+			if {_wasbounty} is true:
+				set {_reward} = ({stats::%{_v}%::karma} ? 0) * 100
+				addGold({_a}, {_reward})
+				grantTitle({_a}, "현상금 사냥꾼")
+				send "<gold>[현상금] %{_v}%님을 처치하여 %{_reward}%골드를 획득했습니다!" to {_a}
+				set {stats::%{_v}%::karma} to 0
+				updateBountyList({_v})
+				updateDisplayName({_v})
