@@ -39,14 +39,14 @@ function addExp(p: player, amount: number):
 	set {stats::%{_p}%::exp} to ({stats::%{_p}%::exp} ? 0) + {_amount}
 	send "<aqua>+%{_amount}% EXP" to {_p}
 	while {stats::%{_p}%::level} < 100 and {stats::%{_p}%::exp} >= getExpToNextLevel({stats::%{_p}%::level}):
-		set {_need} = getExpToNextLevel({stats::%{_p}%::level})
+		set {_need} to getExpToNextLevel({stats::%{_p}%::level})
 		set {stats::%{_p}%::exp} to {stats::%{_p}%::exp} - {_need}
 		levelUp({_p})
 
 function levelUp(p: player):
 	add 1 to {stats::%{_p}%::level}
 	add 5 to {stats::%{_p}%::statpoints}
-	set {_lvl} = {stats::%{_p}%::level}
+	set {_lvl} to {stats::%{_p}%::level}
 	send "<gold><bold>[레벨업]<reset> <yellow>%{_p}%<reset>님이 <gold>Lv.%{_lvl}%<reset> 이(가) 되었습니다! <gray>(스탯포인트 +5)" to all players
 	play sound "entity.player.levelup" at {_p} with volume 1 for {_p}
 	updateDisplayName({_p})

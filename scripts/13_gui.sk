@@ -28,13 +28,13 @@ on swap hand items:
 		openMainGUI(player)
 
 function openMainGUI(p: player):
-	open chest inventory with size 27 named "<dark_aqua><bold>메인 메뉴" to {_p}
-	set {_lvl} = {stats::%{_p}%::level} ? 1
-	set {_gold} = {stats::%{_p}%::gold} ? 0
-	set {_job} = {stats::%{_p}%::job}
+	open chest inventory with 3 rows named "<dark_aqua><bold>메인 메뉴" to {_p}
+	set {_lvl} to {stats::%{_p}%::level} ? 1
+	set {_gold} to {stats::%{_p}%::gold} ? 0
+	set {_job} to {stats::%{_p}%::job}
 	if {_job} is not set or {_job} is "":
-		set {_job} = "없음"
-	set {_head} = player skull of {_p} named "<yellow>%{_p}%"
+		set {_job} to "없음"
+	set {_head} to player skull of {_p} named "<yellow>%{_p}%"
 	set {_head} to {_head} with lore "<gray>레벨: <white>%{_lvl}%" and "<gray>골드: <yellow>%{_gold}%" and "<gray>직업: <aqua>%{_job}%"
 	set slot 4 of {_p}'s current inventory to {_head}
 	set slot 10 of {_p}'s current inventory to emerald named "<green>상점"
@@ -47,18 +47,19 @@ function openMainGUI(p: player):
 on inventory click:
 	if name of event-inventory is "<dark_aqua><bold>메인 메뉴":
 		cancel event
-		set {_p} = player
-		if clicked item is emerald:
+		set {_p} to player
+		set {_slotnum} to index of event-slot
+		if {_slotnum} is 10:
 			openShopGUI({_p}, "무기")
-		else if clicked item is nether star named "<gold>칭호":
+		else if {_slotnum} is 11:
 			openTitleGUI({_p}, 1)
-		else if clicked item is chest:
+		else if {_slotnum} is 13:
 			openUserShopGUI({_p}, 1)
-		else if clicked item is skeleton skull:
+		else if {_slotnum} is 15:
 			openBountyGUI({_p})
-		else if clicked item is gold block:
+		else if {_slotnum} is 16:
 			openRankingGUI({_p})
-		else if clicked item is nether star named "<aqua>스탯":
+		else if {_slotnum} is 22:
 			openStatGUI({_p})
 
 command /메뉴:
@@ -88,19 +89,19 @@ on script load:
 
 function openShopGUI(p: player, category: text):
 	set {shopview::%{_p}%} to {_category}
-	open chest inventory with size 45 named "<dark_green>상점 - %{_category}%" to {_p}
+	open chest inventory with 5 rows named "<dark_green>상점 - %{_category}%" to {_p}
 	set slot 0 of {_p}'s current inventory to iron sword named "<white>무기"
 	set slot 1 of {_p}'s current inventory to iron chestplate named "<white>방어구"
 	set slot 2 of {_p}'s current inventory to cooked beef named "<white>소모품"
 	set slot 3 of {_p}'s current inventory to iron ingot named "<white>재료"
-	set {_gold} = {stats::%{_p}%::gold} ? 0
+	set {_gold} to {stats::%{_p}%::gold} ? 0
 	set slot 8 of {_p}'s current inventory to gold ingot named "<gold>보유 골드: %{_gold}%"
 	loop 3 times:
-		set {_slot} = loop-number - 1
-		set {_itemtype} = {shopdata::%{_category}%::%{_slot}%::item}
-		set {_price} = {shopdata::%{_category}%::%{_slot}%::price}
+		set {_slot} to loop-number - 1
+		set {_itemtype} to {shopdata::%{_category}%::%{_slot}%::item}
+		set {_price} to {shopdata::%{_category}%::%{_slot}%::price}
 		if {_itemtype} is set:
-			set {_display} = {_itemtype} parsed as itemtype
+			set {_display} to {_itemtype} parsed as itemtype
 			set {_display} to {_display} named "<white>%{_itemtype}%"
 			set {_display} to {_display} with lore "<yellow>가격: %{_price}%G" and "<gray>우클릭: 구매 / 좌클릭: 정보"
 			set slot (9 + {_slot}) of {_p}'s current inventory to {_display}
@@ -108,20 +109,25 @@ function openShopGUI(p: player, category: text):
 on inventory click:
 	if name of event-inventory contains "상점 - ":
 		cancel event
-		set {_p} = player
-		set {_category} = {shopview::%{_p}%}
-		if raw slot is 0:
-			openShopGUI({_p}, "무기") ; stop
-		else if raw slot is 1:
-			openShopGUI({_p}, "방어구") ; stop
-		else if raw slot is 2:
-			openShopGUI({_p}, "소모품") ; stop
-		else if raw slot is 3:
-			openShopGUI({_p}, "재료") ; stop
-		if raw slot >= 9 and raw slot <= 11:
-			set {_slot} = raw slot - 9
-			set {_price} = {shopdata::%{_category}%::%{_slot}%::price}
-			set {_itemtype} = {shopdata::%{_category}%::%{_slot}%::item}
+		set {_p} to player
+		set {_category} to {shopview::%{_p}%}
+		set {_slotnum} to index of event-slot
+		if {_slotnum} is 0:
+			openShopGUI({_p}, "무기")
+			stop
+		else if {_slotnum} is 1:
+			openShopGUI({_p}, "방어구")
+			stop
+		else if {_slotnum} is 2:
+			openShopGUI({_p}, "소모품")
+			stop
+		else if {_slotnum} is 3:
+			openShopGUI({_p}, "재료")
+			stop
+		if {_slotnum} >= 9 and {_slotnum} <= 11:
+			set {_slot} to {_slotnum} - 9
+			set {_price} to {shopdata::%{_category}%::%{_slot}%::price}
+			set {_itemtype} to {shopdata::%{_category}%::%{_slot}%::item}
 			if {_price} is set:
 				if removeGold({_p}, {_price}) is true:
 					give {_p} ({_itemtype} parsed as itemtype)
@@ -137,7 +143,7 @@ command /판매등록 <number>:
 		if tool of player is air:
 			send "<red>판매할 아이템을 손에 들어주세요." to player
 			stop
-		set {_id} = ({usershop::nextid} ? 0) + 1
+		set {_id} to ({usershop::nextid} ? 0) + 1
 		set {usershop::nextid} to {_id}
 		set {usershop::listing::%{_id}%::seller} to "%player%"
 		set {usershop::listing::%{_id}%::item} to tool of player
@@ -147,17 +153,17 @@ command /판매등록 <number>:
 		send "<green>[유저상점] %arg-1%G 에 아이템을 등록했습니다. (판매시 5%% 세금 차감)" to player
 
 function openUserShopGUI(p: player, page: number):
-	open chest inventory with size 54 named "<gold>유저상점 - %{_page}%페이지" to {_p}
+	open chest inventory with 6 rows named "<gold>유저상점 - %{_page}%페이지" to {_p}
 	delete {usershopview::%{_p}%::*}
-	set {_slot} = 0
+	set {_slot} to 0
 	loop {usershop::active::*}:
 		if {_slot} >= (({_page} - 1) * 28) and {_slot} < ({_page} * 28):
-			set {_id} = loop-value
-			set {_item} = {usershop::listing::%{_id}%::item}
-			set {_price} = {usershop::listing::%{_id}%::price}
-			set {_seller} = {usershop::listing::%{_id}%::seller}
-			set {_rawslot} = {_slot} - (({_page} - 1) * 28)
-			set {_display} = {_item}
+			set {_id} to loop-value
+			set {_item} to {usershop::listing::%{_id}%::item}
+			set {_price} to {usershop::listing::%{_id}%::price}
+			set {_seller} to {usershop::listing::%{_id}%::seller}
+			set {_rawslot} to {_slot} - (({_page} - 1) * 28)
+			set {_display} to {_item}
 			set {_display} to {_display} with lore "<yellow>가격: %{_price}%G" and "<gray>판매자: %{_seller}%"
 			set slot {_rawslot} of {_p}'s current inventory to {_display}
 			set {usershopview::%{_p}%::%{_rawslot}%} to {_id}
@@ -167,27 +173,28 @@ function openUserShopGUI(p: player, page: number):
 on inventory click:
 	if name of event-inventory contains "유저상점 - ":
 		cancel event
-		set {_p} = player
-		if clicked item is paper named "<yellow>내 판매내역 (/판매내역)":
+		set {_p} to player
+		set {_slotnum} to index of event-slot
+		if {_slotnum} is 49:
 			send "<gold>=== 내 판매 목록 ===" to {_p}
 			loop {usershop::active::*}:
-				set {_lseller} = {usershop::listing::%loop-value%::seller}
+				set {_lseller} to {usershop::listing::%loop-value%::seller}
 				if {_lseller} is "%{_p}%":
-					set {_lprice} = {usershop::listing::%loop-value%::price}
+					set {_lprice} to {usershop::listing::%loop-value%::price}
 					send "<gray>- ID %loop-value% / %{_lprice}%G" to {_p}
 			stop
-		if clicked item is not air:
-			set {_id} = {usershopview::%{_p}%::%raw slot%}
+		if {_slotnum} >= 0 and {_slotnum} <= 27:
+			set {_id} to {usershopview::%{_p}%::%{_slotnum}%}
 			if {_id} is set:
-				set {_price} = {usershop::listing::%{_id}%::price}
-				set {_seller} = {usershop::listing::%{_id}%::seller}
-				set {_solditem} = {usershop::listing::%{_id}%::item}
+				set {_price} to {usershop::listing::%{_id}%::price}
+				set {_seller} to {usershop::listing::%{_id}%::seller}
+				set {_solditem} to {usershop::listing::%{_id}%::item}
 				if {_seller} is "%{_p}%":
 					send "<red>본인이 등록한 아이템은 구매할 수 없습니다." to {_p}
 					stop
 				if removeGold({_p}, {_price}) is true:
-					set {_tax} = {_price} * 0.05
-					set {_sellergain} = {_price} - {_tax}
+					set {_tax} to {_price} * 0.05
+					set {_sellergain} to {_price} - {_tax}
 					addGold({_seller} parsed as offlineplayer, {_sellergain})
 					give {_p} {_solditem}
 					remove {_id} from {usershop::active::*}
@@ -203,14 +210,14 @@ on inventory click:
 # 현상금 GUI (카르마 2 이상, 60초마다 데이터 자동 갱신)
 ########################################################################
 function openBountyGUI(p: player):
-	open chest inventory with size 36 named "<red>현상금 명단" to {_p}
-	set {_slot} = 0
+	open chest inventory with 4 rows named "<red>현상금 명단" to {_p}
+	set {_slot} to 0
 	loop {bountylist::*}:
 		if {_slot} < 28:
-			set {_target} = loop-value
-			set {_karma} = {stats::%{_target}%::karma} ? 0
-			set {_reward} = {_karma} * 100
-			set {_head} = player skull of ({_target} parsed as offlineplayer) named "<red>%{_target}%"
+			set {_target} to loop-value
+			set {_karma} to {stats::%{_target}%::karma} ? 0
+			set {_reward} to {_karma} * 100
+			set {_head} to player skull of ({_target} parsed as offlineplayer) named "<red>%{_target}%"
 			set {_head} to {_head} with lore "<gray>카르마: <red>%{_karma}%" and "<gold>현상금: %{_reward}%G"
 			set slot {_slot} of {_p}'s current inventory to {_head}
 			add 1 to {_slot}
@@ -225,23 +232,27 @@ every 60 seconds:
 ########################################################################
 every 60 seconds:
 	delete {ranking::sorted::*}
-	set {_list::*} = {allplayers::*}
-	set {_n} = size of {_list::*}
+	set {_list::*} to {allplayers::*}
+	set {_n} to size of {_list::*}
 	loop {_n} times:
-		set {_besti} = 0
-		set {_bestlvl} = -1
-		set {_bestexp} = -1
+		set {_besti} to 0
+		set {_bestlvl} to -1
+		set {_bestexp} to -1
 		loop {_list::*}:
-			set {_pl} = loop-value
+			set {_pl} to loop-value
 			if {_pl} is not "USED":
-				set {_lvl} = {stats::%{_pl}%::level} ? 0
-				set {_exp} = {stats::%{_pl}%::exp} ? 0
-				if {_lvl} > {_bestlvl} or ({_lvl} = {_bestlvl} and {_exp} > {_bestexp}):
-					set {_bestlvl} = {_lvl}
-					set {_bestexp} = {_exp}
-					set {_besti} = loop-index
+				set {_lvl} to {stats::%{_pl}%::level} ? 0
+				set {_exp} to {stats::%{_pl}%::exp} ? 0
+				if {_lvl} > {_bestlvl}:
+					set {_bestlvl} to {_lvl}
+					set {_bestexp} to {_exp}
+					set {_besti} to loop-index
+				else if {_lvl} = {_bestlvl} and {_exp} > {_bestexp}:
+					set {_bestlvl} to {_lvl}
+					set {_bestexp} to {_exp}
+					set {_besti} to loop-index
 		if {_besti} > 0:
-			set {_winner} = {_list::%{_besti}%}
+			set {_winner} to {_list::%{_besti}%}
 			set {_list::%{_besti}%} to "USED"
 			add 1 to {_rank}
 			if {_rank} <= 50:
@@ -252,20 +263,20 @@ every 60 seconds:
 			grantTitle({ranking::sorted::1} parsed as offlineplayer, "서버의 전설")
 
 function openRankingGUI(p: player):
-	open chest inventory with size 54 named "<gold>레벨 랭킹" to {_p}
-	set {_slot} = 0
+	open chest inventory with 6 rows named "<gold>레벨 랭킹" to {_p}
+	set {_slot} to 0
 	loop 45 times:
-		set {_rank} = loop-number
-		set {_name} = {ranking::sorted::%{_rank}%}
+		set {_rank} to loop-number
+		set {_name} to {ranking::sorted::%{_rank}%}
 		if {_name} is set:
-			set {_rlvl} = {stats::%{_name}%::level} ? 0
-			set {_head} = player skull of ({_name} parsed as offlineplayer) named "<yellow>#%{_rank}% %{_name}%"
+			set {_rlvl} to {stats::%{_name}%::level} ? 0
+			set {_head} to player skull of ({_name} parsed as offlineplayer) named "<yellow>#%{_rank}% %{_name}%"
 			set {_head} to {_head} with lore "<gray>레벨: %{_rlvl}%"
 			if {_rank} is 1:
 				enchant {_head} with unbreaking 1
 			set slot ({_rank} - 1) of {_p}'s current inventory to {_head}
-	set {_myrank} = 0
+	set {_myrank} to 0
 	loop {ranking::sorted::*}:
 		if loop-value is "%{_p}%":
-			set {_myrank} = loop-index
+			set {_myrank} to loop-index
 	set slot 49 of {_p}'s current inventory to player skull of {_p} named "<green>내 순위: #%{_myrank}%"

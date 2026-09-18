@@ -156,24 +156,24 @@ function nearestJobLocation(p: player) :: text:
 	loop {jobdata::list::*}:
 		if {joblocation::%loop-value%::world} is set:
 			if {joblocation::%loop-value%::world} is "%world of {_p}%":
-				set {_dx} = x of location of {_p} - {joblocation::%loop-value%::x}
-				set {_dy} = y of location of {_p} - {joblocation::%loop-value%::y}
-				set {_dz} = z of location of {_p} - {joblocation::%loop-value%::z}
-				set {_dist} = sqrt(({_dx} * {_dx}) + ({_dy} * {_dy}) + ({_dz} * {_dz}))
+				set {_dx} to x of location of {_p} - {joblocation::%loop-value%::x}
+				set {_dy} to y of location of {_p} - {joblocation::%loop-value%::y}
+				set {_dz} to z of location of {_p} - {joblocation::%loop-value%::z}
+				set {_dist} to sqrt(({_dx} * {_dx}) + ({_dy} * {_dy}) + ({_dz} * {_dz}))
 				if {_dist} <= 3:
 					return loop-value
 	return ""
 
 every 1 second:
 	loop all players:
-		set {_p} = loop-player
-		set {_near} = nearestJobLocation({_p})
+		set {_p} to loop-player
+		set {_near} to nearestJobLocation({_p})
 		if {_near} is not "" and {_p} is sneaking:
 			if {jobchange::%{_p}%::target} is not {_near}:
 				set {jobchange::%{_p}%::target} to {_near}
 				set {jobchange::%{_p}%::progress} to 0
 			add 1 to {jobchange::%{_p}%::progress}
-			set {_pct} = {jobchange::%{_p}%::progress} * 20
+			set {_pct} to {jobchange::%{_p}%::progress} * 20
 			send action bar "<yellow>[%{_near}%] 전직 진행중: <gold>%{_pct}%%%" to {_p}
 			if {jobchange::%{_p}%::progress} >= 5:
 				completeJobChange({_p}, {_near})
@@ -200,7 +200,7 @@ function completeJobChange(p: player, job: text):
 			broadcast "<gold>[서버 최초] %{_p}%님이 서버 최초로 히든 직업(%{_job}%)을 차지했습니다!"
 
 	# 기존 히든 직업 보유였다면 슬롯 반납
-	set {_oldjob} = {stats::%{_p}%::job}
+	set {_oldjob} to {stats::%{_p}%::job}
 	if {_oldjob} is not "" and {jobdata::hidden::%{_oldjob}%} is true:
 		if {server::hiddenjob::%{_oldjob}%} is "%{_p}%":
 			delete {server::hiddenjob::%{_oldjob}%}
@@ -226,7 +226,7 @@ function completeJobChange(p: player, job: text):
 		grantTitle({_p}, "숨겨진 힘")
 
 function giveJobTool(p: player, job: text):
-	set {_tool} = {jobtooldata::%{_job}%}
+	set {_tool} to {jobtooldata::%{_job}%}
 	if {_tool} is "마법지팡이":
 		give {_p} a blaze rod named "<light_purple>마법지팡이" with lore "<gray>마법사 전용 무기"
 	else if {_tool} is "무한 활":
@@ -239,15 +239,15 @@ function giveJobTool(p: player, job: text):
 
 command /직업정보:
 	trigger:
-		set {_job} = {stats::%player%::job}
+		set {_job} to {stats::%player%::job}
 		if {_job} is "" or {_job} is not set:
 			send "<gray>아직 직업이 없습니다. 전직 장소에서 5초간 웅크려 전직하세요." to player
 			stop
 		send "<gold>=== 직업 정보 ===" to player
 		send "<yellow>직업: <white>%{_job}%<gray> (%{jobdata::type::%{_job}%}%)" to player
 		loop {jobdata::skills::%{_job}%::*}:
-			set {_req} = {jobdata::skillreq::%loop-value%}
-			set {_have} = ({stats::%player%::level} ? 1) >= {_req}
+			set {_req} to {jobdata::skillreq::%loop-value%}
+			set {_have} to ({stats::%player%::level} ? 1) >= {_req}
 			if {_have} is true:
 				send "<green>✔ %loop-value% <gray>(%{_req}%Lv)" to player
 			else:

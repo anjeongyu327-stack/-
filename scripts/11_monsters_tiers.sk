@@ -17,18 +17,18 @@
 ########################################################################
 
 function trySpawnElite(e: entity, region: text, base: text) :: boolean:
-	set {_id} = pickNormalId({_region}, {_base})
+	set {_id} to pickNormalId({_region}, {_base})
 	if {_id} = -1:
 		return false
-	set {_hp} = {mobdef::normal::%{_id}%::hp} * 2
-	set {_dmg} = {mobdef::normal::%{_id}%::dmg} * 2
-	set {_lvl} = {mobdef::normal::%{_id}%::level}
-	set {_mname} = {mobdef::normal::%{_id}%::name}
+	set {_hp} to {mobdef::normal::%{_id}%::hp} * 2
+	set {_dmg} to {mobdef::normal::%{_id}%::dmg} * 2
+	set {_lvl} to {mobdef::normal::%{_id}%::level}
+	set {_mname} to {mobdef::normal::%{_id}%::name}
 	set the max health of {_e} to {_hp}
 	heal {_e} by {_hp}
 	set the attack damage of {_e} to {_dmg}
 	set name of {_e} to "<blue>[정예]<gray>(Lv.%{_lvl}% %{_mname}%)"
-	set {_uuid} = "%uuid of {_e}%"
+	set {_uuid} to "%uuid of {_e}%"
 	set {mobinstance::%{_uuid}%::tier} to "ELITE"
 	set {mobinstance::%{_uuid}%::defid} to {_id}
 	set {mobinstance::%{_uuid}%::level} to {_lvl}
@@ -41,18 +41,18 @@ function trySpawnElite(e: entity, region: text, base: text) :: boolean:
 	return true
 
 function trySpawnGuard(e: entity, region: text, base: text) :: boolean:
-	set {_id} = pickNormalId({_region}, {_base})
+	set {_id} to pickNormalId({_region}, {_base})
 	if {_id} = -1:
 		return false
-	set {_hp} = {mobdef::normal::%{_id}%::hp} * 4
-	set {_dmg} = {mobdef::normal::%{_id}%::dmg} * 2.5
-	set {_lvl} = {mobdef::normal::%{_id}%::level}
-	set {_mname} = {mobdef::normal::%{_id}%::name}
+	set {_hp} to {mobdef::normal::%{_id}%::hp} * 4
+	set {_dmg} to {mobdef::normal::%{_id}%::dmg} * 2.5
+	set {_lvl} to {mobdef::normal::%{_id}%::level}
+	set {_mname} to {mobdef::normal::%{_id}%::name}
 	set the max health of {_e} to {_hp}
 	heal {_e} by {_hp}
 	set the attack damage of {_e} to {_dmg}
 	set name of {_e} to "<dark_purple>[근위]<gray>(Lv.%{_lvl}% %{_mname}%)"
-	set {_uuid} = "%uuid of {_e}%"
+	set {_uuid} to "%uuid of {_e}%"
 	set {mobinstance::%{_uuid}%::tier} to "GUARD"
 	set {mobinstance::%{_uuid}%::defid} to {_id}
 	set {mobinstance::%{_uuid}%::level} to {_lvl}
@@ -68,9 +68,9 @@ function trySpawnGuard(e: entity, region: text, base: text) :: boolean:
 # 데이터가 먼저 삭제되어 근위/정예 보상이 누락될 수 있으므로 반드시 단일 핸들러로 통합한다).
 function rewardEliteOrGuardKill(p: player, uuid: text, tier: text):
 	if {_tier} is "ELITE":
-		set {_exp} = getEliteTierExp({mobinstance::%{_uuid}%::level})
+		set {_exp} to getEliteTierExp({mobinstance::%{_uuid}%::level})
 	else:
-		set {_exp} = getGuardTierExp({mobinstance::%{_uuid}%::level})
+		set {_exp} to getGuardTierExp({mobinstance::%{_uuid}%::level})
 	handleMonsterKillReward({_p}, {mobinstance::%{_uuid}%::level}, {_exp}, {mobinstance::%{_uuid}%::goldmin}, {mobinstance::%{_uuid}%::goldmax}, {mobinstance::%{_uuid}%::dropitem}, {mobinstance::%{_uuid}%::dropchance})
 	if {_tier} is "ELITE":
 		add 1 to {stats::%{_p}%::kills::elite}

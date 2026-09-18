@@ -33,26 +33,29 @@ on script load:
 	broadcast "<gray>[시스템] 엘리트(네임드) 몬스터 4종 로드 완료" to console
 
 function bossMatchesBase(bossid: text, base: text) :: boolean:
-	set {_bbase} = {bossdata::base::%{_bossid}%}
+	set {_bbase} to {bossdata::base::%{_bossid}%}
 	if {_bbase} is {_base}:
 		return true
-	if {_bbase} is "BLAZE_OR_PIGLIN" and ({_base} is "BLAZE" or {_base} is "PIGLIN"):
-		return true
+	if {_bbase} is "BLAZE_OR_PIGLIN":
+		if {_base} is "BLAZE":
+			return true
+		if {_base} is "PIGLIN":
+			return true
 	return false
 
 function trySpawnBoss(e: entity, region: text, base: text) :: boolean:
 	loop {bossdata::list::*}:
 		if bossMatchesBase(loop-value, {_base}) is true:
-			set {_id} = loop-value
-			set {_hp} = {bossdata::hp::%{_id}%}
-			set {_dmg} = {bossdata::dmg::%{_id}%}
-			set {_lvl} = {bossdata::level::%{_id}%}
-			set {_bname} = {bossdata::name::%{_id}%}
+			set {_id} to loop-value
+			set {_hp} to {bossdata::hp::%{_id}%}
+			set {_dmg} to {bossdata::dmg::%{_id}%}
+			set {_lvl} to {bossdata::level::%{_id}%}
+			set {_bname} to {bossdata::name::%{_id}%}
 			set the max health of {_e} to {_hp}
 			heal {_e} by {_hp}
 			set the attack damage of {_e} to {_dmg}
 			set name of {_e} to "<dark_red><bold>[엘리트]<gray>(Lv.%{_lvl}% %{_bname}%)"
-			set {_uuid} = "%uuid of {_e}%"
+			set {_uuid} to "%uuid of {_e}%"
 			set {mobinstance::%{_uuid}%::tier} to "BOSS"
 			set {mobinstance::%{_uuid}%::bossid} to {_id}
 			set {mobinstance::%{_uuid}%::level} to {_lvl}
@@ -65,8 +68,8 @@ function trySpawnBoss(e: entity, region: text, base: text) :: boolean:
 	return false
 
 function rewardBossKill(p: player, uuid: text, deathloc: location):
-	set {_lvl} = {mobinstance::%{_uuid}%::level}
-	set {_exp} = getBossTierExp({_lvl})
+	set {_lvl} to {mobinstance::%{_uuid}%::level}
+	set {_exp} to getBossTierExp({_lvl})
 	handleMonsterKillReward({_p}, {_lvl}, {_exp}, {mobinstance::%{_uuid}%::goldmin}, {mobinstance::%{_uuid}%::goldmax}, {mobinstance::%{_uuid}%::dropitem}, {mobinstance::%{_uuid}%::dropchance})
 	add 1 to {stats::%{_p}%::kills::boss}
 	checkBossKillTitles({_p})
@@ -84,9 +87,9 @@ function rewardBossKill(p: player, uuid: text, deathloc: location):
 ########################################################################
 on damage:
 	if attacker is a monster:
-		set {_uuid} = "%uuid of attacker%"
+		set {_uuid} to "%uuid of attacker%"
 		if {mobinstance::%{_uuid}%::tier} is "BOSS":
-			set {_bossid} = {mobinstance::%{_uuid}%::bossid}
+			set {_bossid} to {mobinstance::%{_uuid}%::bossid}
 			if {_bossid} is "paladin":
 				if random number between 0.0 and 1.0 <= 0.15:
 					apply potion effect of blindness to victim for 40 ticks
@@ -97,7 +100,7 @@ on damage:
 every 3 seconds:
 	loop all entities:
 		if loop-entity is a monster:
-			set {_uuid} = "%uuid of loop-entity%"
+			set {_uuid} to "%uuid of loop-entity%"
 			if {mobinstance::%{_uuid}%::bossid} is "archbishop":
 				if health of loop-entity < max health of loop-entity:
 					heal loop-entity by (max health of loop-entity * 0.05)

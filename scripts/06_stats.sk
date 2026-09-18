@@ -25,12 +25,12 @@
 ########################################################################
 
 function applyStatEffects(p: player):
-	set {_vit} = {stats::%{_p}%::vit} ? 0
+	set {_vit} to {stats::%{_p}%::vit} ? 0
 	set the max health of {_p} to (20 + {_vit})
-	set {_agi} = {stats::%{_p}%::agi} ? 0
-	set {_mult} = 1 + ({_agi} * 0.05)
+	set {_agi} to {stats::%{_p}%::agi} ? 0
+	set {_mult} to 1 + ({_agi} * 0.05)
 	if {_mult} > 3.0:
-		set {_mult} = 3.0
+		set {_mult} to 3.0
 	set the walk speed of {_p} to (0.2 * {_mult})
 
 function getStrengthBonus(p: player) :: number:
@@ -47,12 +47,12 @@ function getEvasionChance(p: player) :: number:
 # ------------------------------------------------------------------
 on damage:
 	if attacker is a player:
-		set {_dmg} = damage
-		set {_dmg} = {_dmg} + getStrengthBonus(attacker)
-		set {_iscrit} = false
+		set {_dmg} to damage
+		set {_dmg} to {_dmg} + getStrengthBonus(attacker)
+		set {_iscrit} to false
 		if random number between 0.0 and 1.0 <= getCritChance(attacker):
-			set {_dmg} = {_dmg} * 2
-			set {_iscrit} = true
+			set {_dmg} to {_dmg} * 2
+			set {_iscrit} to true
 			send action bar "<gold><bold>치명타!" to attacker
 		set damage to {_dmg}
 		set {lastcrit::%attacker%} to {_iscrit}
@@ -71,13 +71,13 @@ on damage:
 # 스탯 GUI
 # ------------------------------------------------------------------
 function openStatGUI(p: player):
-	open chest inventory with size 27 named "<dark_aqua>스탯 분배" to {_p}
-	set {_pts} = {stats::%{_p}%::statpoints} ? 0
-	set {_str} = {stats::%{_p}%::str} ? 0
-	set {_agi} = {stats::%{_p}%::agi} ? 0
-	set {_vit} = {stats::%{_p}%::vit} ? 0
-	set {_luck} = {stats::%{_p}%::luck} ? 0
-	set {_eva} = {stats::%{_p}%::eva} ? 0
+	open chest inventory with 3 rows named "<dark_aqua>스탯 분배" to {_p}
+	set {_pts} to {stats::%{_p}%::statpoints} ? 0
+	set {_str} to {stats::%{_p}%::str} ? 0
+	set {_agi} to {stats::%{_p}%::agi} ? 0
+	set {_vit} to {stats::%{_p}%::vit} ? 0
+	set {_luck} to {stats::%{_p}%::luck} ? 0
+	set {_eva} to {stats::%{_p}%::eva} ? 0
 	set slot 4 of {_p}'s current inventory to nether star named "<yellow>잔여 포인트: %{_pts}%" with lore "<gray>좌클릭 +1 / 쉬프트+좌클릭 +10" and "<gray>우클릭 -1 (최근 5분 이내 투자분만 환불)"
 	set slot 10 of {_p}'s current inventory to iron sword named "<red>힘: %{_str}%" with lore "<gray>공격력 +0.15 / 1포인트"
 	set slot 11 of {_p}'s current inventory to feather named "<green>민첩: %{_agi}%" with lore "<gray>이동속도 +5%% / 1포인트 (최대 300%%)"
@@ -99,9 +99,9 @@ function statSlotName(slot: number) :: text:
 	return ""
 
 function grantStatPoint(p: player, stat: text, amount: number):
-	set {_have} = {stats::%{_p}%::statpoints} ? 0
+	set {_have} to {stats::%{_p}%::statpoints} ? 0
 	if {_have} < {_amount}:
-		set {_amount} = {_have}
+		set {_amount} to {_have}
 	if {_amount} <= 0:
 		stop
 	add {_amount} to {stats::%{_p}%::%{_stat}%}
@@ -114,7 +114,7 @@ function grantStatPoint(p: player, stat: text, amount: number):
 function refundStatPoint(p: player, stat: text):
 	if {stats::%{_p}%::%{_stat}%} ? 0 <= 0:
 		stop
-	set {_t} = {stats::%{_p}%::lastalloc::%{_stat}%::time}
+	set {_t} to {stats::%{_p}%::lastalloc::%{_stat}%::time}
 	if {_t} is not set:
 		send "<red>최근 5분 이내에 투자한 포인트만 환불할 수 있습니다." to {_p}
 		stop
@@ -129,15 +129,15 @@ function refundStatPoint(p: player, stat: text):
 on inventory click:
 	if name of event-inventory is "<dark_aqua>스탯 분배":
 		cancel event
-		set {_p} = player
-		set {_stat} = statSlotName(raw slot)
+		set {_p} to player
+		set {_stat} to statSlotName(index of event-slot)
 		if {_stat} is "":
 			stop
-		if click type is left click:
-			grantStatPoint({_p}, {_stat}, 1)
-		else if click type is shift left click:
+		if click type is shift_left:
 			grantStatPoint({_p}, {_stat}, 10)
-		else if click type is right click:
+		else if click type is left:
+			grantStatPoint({_p}, {_stat}, 1)
+		else if click type is right:
 			refundStatPoint({_p}, {_stat})
 		openStatGUI({_p})
 

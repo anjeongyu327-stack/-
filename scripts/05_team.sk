@@ -14,46 +14,48 @@
 ########################################################################
 
 function openTeamChoiceGUI(p: player):
-	open chest inventory with size 27 named "<gold>팀 선택" to {_p}
+	open chest inventory with 3 rows named "<gold>팀 선택" to {_p}
 	set slot 11 of {_p}'s current inventory to red wool named "<red><bold>RED팀"
 	set slot 15 of {_p}'s current inventory to blue wool named "<blue><bold>BLUE팀"
 	set slot 13 of {_p}'s current inventory to white wool named "<gray><bold>팀 없음 (팀X)"
 
 function openTeamLockGUI(p: player):
-	open chest inventory with size 27 named "<gold>팀 확정 (필수)" to {_p}
+	open chest inventory with 3 rows named "<gold>팀 확정 (필수)" to {_p}
 	set slot 11 of {_p}'s current inventory to red wool named "<red><bold>RED팀으로 확정"
 	set slot 15 of {_p}'s current inventory to blue wool named "<blue><bold>BLUE팀으로 확정"
 
 on inventory click:
 	if name of event-inventory is "<gold>팀 선택":
 		cancel event
-		set {_p} = player
-		if clicked item is red wool:
+		set {_p} to player
+		set {_slot} to index of event-slot
+		if {_slot} is 11:
 			set {stats::%{_p}%::team} to "RED"
 			grantTitle({_p}, "붉은 깃발")
 			send "<red>RED팀을 선택했습니다." to {_p}
 			close {_p}'s inventory
-		else if clicked item is blue wool:
+		else if {_slot} is 15:
 			set {stats::%{_p}%::team} to "BLUE"
 			grantTitle({_p}, "푸른 깃발")
 			send "<blue>BLUE팀을 선택했습니다." to {_p}
 			close {_p}'s inventory
-		else if clicked item is white wool:
+		else if {_slot} is 13:
 			set {stats::%{_p}%::team} to "NONE"
 			send "<gray>팀에 소속되지 않았습니다. (10레벨 달성시 RED/BLUE 중 하나를 확정해야 합니다)" to {_p}
 			close {_p}'s inventory
 
 	if name of event-inventory is "<gold>팀 확정 (필수)":
 		cancel event
-		set {_p} = player
-		if clicked item is red wool:
+		set {_p} to player
+		set {_slot} to index of event-slot
+		if {_slot} is 11:
 			set {stats::%{_p}%::team} to "RED"
 			set {stats::%{_p}%::teamlocked} to true
 			grantTitle({_p}, "붉은 깃발")
 			grantTitle({_p}, "결정의 순간")
 			send "<red>RED팀으로 확정되었습니다." to {_p}
 			close {_p}'s inventory
-		else if clicked item is blue wool:
+		else if {_slot} is 15:
 			set {stats::%{_p}%::team} to "BLUE"
 			set {stats::%{_p}%::teamlocked} to true
 			grantTitle({_p}, "푸른 깃발")
@@ -79,8 +81,8 @@ function checkTeamLock(p: player, lvl: number):
 # 두 플레이어가 서로 "적팀"인지 여부. 팀X 는 초반(10레벨 미만)에는 모두와 아군 취급되어
 # 아무도 죽일 수 없는 중립으로 처리하고, teamlocked 이후에는 이 함수를 타지 않는다(팀X 자체가 사라짐).
 function isEnemyTeam(a: player, b: player) :: boolean:
-	set {_ta} = {stats::%{_a}%::team}
-	set {_tb} = {stats::%{_b}%::team}
+	set {_ta} to {stats::%{_a}%::team}
+	set {_tb} to {stats::%{_b}%::team}
 	if {_ta} is "NONE" or {_tb} is "NONE":
 		return false
 	if {_ta} is {_tb}:
@@ -88,8 +90,8 @@ function isEnemyTeam(a: player, b: player) :: boolean:
 	return true
 
 function isSameTeam(a: player, b: player) :: boolean:
-	set {_ta} = {stats::%{_a}%::team}
-	set {_tb} = {stats::%{_b}%::team}
+	set {_ta} to {stats::%{_a}%::team}
+	set {_tb} to {stats::%{_b}%::team}
 	if {_ta} is "NONE" or {_tb} is "NONE":
 		return false
 	if {_ta} is {_tb}:

@@ -42,7 +42,7 @@ function useMana(p: player, cost: number):
 	subtract {_cost} from {stats::%{_p}%::mana}
 
 function isOnCooldown(p: player, skill: text, seconds: number) :: boolean:
-	set {_t} = {cooldown::%{_p}%::%{_skill}%}
+	set {_t} to {cooldown::%{_p}%::%{_skill}%}
 	if {_t} is not set:
 		return false
 	if difference between now and {_t} < {_seconds} seconds:
@@ -53,7 +53,7 @@ function setCooldown(p: player, skill: text):
 	set {cooldown::%{_p}%::%{_skill}%} to now
 
 function remainingCooldown(p: player, skill: text, seconds: number) :: number:
-	set {_t} = {cooldown::%{_p}%::%{_skill}%}
+	set {_t} to {cooldown::%{_p}%::%{_skill}%}
 	if {_t} is not set:
 		return 0
 	return ({_seconds} - (difference between now and {_t} in seconds))
@@ -62,7 +62,7 @@ function remainingCooldown(p: player, skill: text, seconds: number) :: number:
 # 스킬 해금/토글/슬롯 바인딩
 # ------------------------------------------------------------------
 function hasSkillUnlocked(p: player, skill: text) :: boolean:
-	set {_owner} = {jobdata::skillowner::%{_skill}%}
+	set {_owner} to {jobdata::skillowner::%{_skill}%}
 	if {_owner} is not {stats::%{_p}%::job}:
 		return false
 	if ({stats::%{_p}%::level} ? 1) < {jobdata::skillreq::%{_skill}%}:
@@ -76,24 +76,24 @@ function markSkillKnown(p: player, skill: text):
 		checkMaxSkillerTitle({_p})
 
 function checkSkillCollectorTitle(p: player):
-	set {_c} = 0
+	set {_c} to 0
 	loop {stats::%{_p}%::skillsknown::*}:
 		add 1 to {_c}
 	if {_c} >= 10:
 		grantTitle({_p}, "스킬 수집가")
 
 function checkMaxSkillerTitle(p: player):
-	set {_job} = {stats::%{_p}%::job}
+	set {_job} to {stats::%{_p}%::job}
 	if {_job} is "" or {_job} is not set:
 		stop
-	set {_all} = true
+	set {_all} to true
 	loop {jobdata::skills::%{_job}%::*}:
 		if ({stats::%{_p}%::level} ? 1) < {jobdata::skillreq::%loop-value%}:
-			set {_all} = false
-	set {_maxreq} = 0
+			set {_all} to false
+	set {_maxreq} to 0
 	loop {jobdata::skills::%{_job}%::*}:
 		if {jobdata::skillreq::%loop-value%} > {_maxreq}:
-			set {_maxreq} = {jobdata::skillreq::%loop-value%}
+			set {_maxreq} to {jobdata::skillreq::%loop-value%}
 	if {_all} is true and {_maxreq} >= 50:
 		grantTitle({_p}, "만렙 스킬러")
 
@@ -109,7 +109,7 @@ function resetSkillSlots(p: player):
 # 새로 해금된 액티브 스킬을 빈 슬롯에 순서대로 자동배정 (수동 배정은 유지)
 function refreshSkillSlots(p: player):
 	recomputeMaxMana({_p})
-	set {_job} = {stats::%{_p}%::job}
+	set {_job} to {stats::%{_p}%::job}
 	if {_job} is "" or {_job} is not set:
 		stop
 	loop {jobdata::skills::%{_job}%::*}:
@@ -117,7 +117,7 @@ function refreshSkillSlots(p: player):
 			markSkillKnown({_p}, loop-value)
 			if {jobdata::skillpassive::%loop-value%} is not true:
 				if isSkillBound({_p}, loop-value) is false:
-					set {_slot} = firstEmptySlot({_p})
+					set {_slot} to firstEmptySlot({_p})
 					if {_slot} is not "":
 						set {stats::%{_p}%::skillslot::%{_slot}%} to loop-value
 
@@ -136,8 +136,8 @@ function firstEmptySlot(p: player) :: text:
 command /스킬설정 <text> <text>:
 	usage: /스킬설정 <좌클릭|우클릭|쉬프트좌클릭|쉬프트우클릭|쉬프트> <스킬이름>
 	trigger:
-		set {_slotinput} = arg-1
-		set {_slot} = ""
+		set {_slotinput} to arg-1
+		set {_slot} to ""
 		if {_slotinput} is "좌클릭":
 			set {_slot} to "LEFT"
 		else if {_slotinput} is "우클릭":
@@ -162,7 +162,7 @@ command /스킬설정 <text> <text>:
 
 command /스킬토글 <text>:
 	trigger:
-		set {_cur} = {stats::%player%::skilltoggle::%arg-1%}
+		set {_cur} to {stats::%player%::skilltoggle::%arg-1%}
 		if {_cur} is not false:
 			set {stats::%player%::skilltoggle::%arg-1%} to false
 			send "<red>[%arg-1%] 스킬을 비활성화했습니다." to player
@@ -181,7 +181,7 @@ function isSkillEnabled(p: player, skill: text) :: boolean:
 function castSlot(p: player, slot: text):
 	if {stats::%{_p}%::silenced} is true:
 		stop
-	set {_skill} = {stats::%{_p}%::skillslot::%{_slot}%}
+	set {_skill} to {stats::%{_p}%::skillslot::%{_slot}%}
 	if {_skill} is not set or {_skill} is "":
 		stop
 	if hasSkillUnlocked({_p}, {_skill}) is false:
@@ -224,9 +224,9 @@ function getVit(p: player) :: number:
 	return ({stats::%{_p}%::vit} ? 0)
 
 function distanceBetween(a: location, b: location) :: number:
-	set {_dx} = (x of {_a}) - (x of {_b})
-	set {_dy} = (y of {_a}) - (y of {_b})
-	set {_dz} = (z of {_a}) - (z of {_b})
+	set {_dx} to (x of {_a}) - (x of {_b})
+	set {_dy} to (y of {_a}) - (y of {_b})
+	set {_dz} to (z of {_a}) - (z of {_b})
 	return sqrt((({_dx} * {_dx}) + ({_dy} * {_dy})) + ({_dz} * {_dz}))
 
 function requiresWand(p: player) :: boolean:
@@ -240,6 +240,11 @@ function requiresBow(p: player) :: boolean:
 		return true
 	send "<red>무한 활을 손에 들어야 스킬을 사용할 수 있습니다." to {_p}
 	return false
+
+function findOnlinePlayer(name: text) :: player:
+	loop all players:
+		if "%loop-player%" is {_name}:
+			return loop-player
 
 function isValidTarget(attacker: player, target: entity) :: boolean:
 	if {_target} is {_attacker}:
@@ -271,7 +276,7 @@ function damageInRadius(caster: player, loc: location, radius: number, dmg: numb
 
 function firstEntityInLine(p: player, range: number) :: entity:
 	loop {_range} times:
-		set {_loc} = location loop-number blocks in front of {_p}
+		set {_loc} to location loop-number blocks in front of {_p}
 		loop all entities in world of {_p}:
 			if distanceBetween(location of loop-entity, {_loc}) <= 1.5:
 				if isValidTarget({_p}, loop-entity) is true:
@@ -279,23 +284,26 @@ function firstEntityInLine(p: player, range: number) :: entity:
 
 function firstAllyInLine(p: player, range: number) :: player:
 	loop {_range} times:
-		set {_loc} = location loop-number blocks in front of {_p}
+		set {_loc} to location loop-number blocks in front of {_p}
 		loop all players in world of {_p}:
 			if distanceBetween(location of loop-player, {_loc}) <= 1.5:
-				if loop-player is {_p} or isSameTeam({_p}, loop-player) is true:
+				set {_isally} to isSameTeam({_p}, loop-player)
+				if loop-player is {_p}:
+					return loop-player
+				if {_isally} is true:
 					return loop-player
 
 function damageFirstEntityInLine(p: player, range: number, dmg: number):
-	set {_t} = firstEntityInLine({_p}, {_range})
+	set {_t} to firstEntityInLine({_p}, {_range})
 	if {_t} is set:
 		damage {_t} by {_dmg}
 	playCue(location of {_p}, "entity.arrow.shoot")
 
 function damageLineMultiple(p: player, range: number, dmg: number, maxhits: number):
-	set {_hit} = 0
+	set {_hit} to 0
 	delete {_hitlist::*}
 	loop {_range} times:
-		set {_loc} = location loop-number blocks in front of {_p}
+		set {_loc} to location loop-number blocks in front of {_p}
 		loop all entities in world of {_p}:
 			if {_hit} < {_maxhits}:
 				if "%uuid of loop-entity%" is not in {_hitlist::*}:
@@ -310,27 +318,30 @@ function stunNearbyEnemies(p: player, radius: number, seconds: number):
 	loop all entities in world of {_p}:
 		if distanceBetween(location of loop-entity, location of {_p}) <= {_radius}:
 			if isValidTarget({_p}, loop-entity) is true:
-				apply potion effect of slowness of tier 10 to loop-entity for ({_seconds} * 20) ticks
-				apply potion effect of blindness to loop-entity for ({_seconds} * 20) ticks
+				apply potion effect of slowness of tier 10 to loop-entity for {_seconds} seconds
+				apply potion effect of blindness to loop-entity for {_seconds} seconds
 
 function healTarget(p: player, amount: number):
-	set {_target} = firstAllyInLine({_p}, 8)
+	set {_target} to firstAllyInLine({_p}, 8)
 	if {_target} is not set:
-		set {_target} = {_p}
+		set {_target} to {_p}
 	heal {_target} by {_amount}
 	send action bar "<green>+%{_amount}% 체력 회복" to {_target}
 
 function healAlliesInRadius(p: player, radius: number, amount: number):
 	loop all players in world of {_p}:
 		if distanceBetween(location of loop-player, location of {_p}) <= {_radius}:
-			if loop-player is {_p} or isSameTeam({_p}, loop-player) is true:
+			set {_isally2} to isSameTeam({_p}, loop-player)
+			if loop-player is {_p}:
+				heal loop-player by {_amount}
+			else if {_isally2} is true:
 				heal loop-player by {_amount}
 
 function tauntNearbyMobs(p: player, radius: number):
 	loop all entities in world of {_p}:
 		if loop-entity is a monster:
 			if distanceBetween(location of loop-entity, location of {_p}) <= {_radius}:
-				force loop-entity to target {_p}
+				set the target of loop-entity to {_p}
 
 function playCrescentEffect(p: player):
 	playCue(location of {_p}, "entity.player.attack.sweep")
@@ -343,11 +354,11 @@ function castRandomSkill(p: player, minlvl: number, maxlvl: number):
 	loop {jobdata::list::*}:
 		loop {jobdata::skills::%loop-value-1%::*}:
 			if {jobdata::skillpassive::%loop-value-2%} is not true:
-				set {_req} = {jobdata::skillreq::%loop-value-2%}
+				set {_req} to {jobdata::skillreq::%loop-value-2%}
 				if {_req} >= {_minlvl} and {_req} <= {_maxlvl}:
 					add loop-value-2 to {_pool::*}
 	if size of {_pool::*} > 0:
-		set {_pick} = a random element out of {_pool::*}
+		set {_pick} to a random element out of {_pool::*}
 		executeActiveSkill({_p}, {_pick})
 
 ########################################################################
@@ -357,23 +368,24 @@ function castRandomSkill(p: player, minlvl: number, maxlvl: number):
 ########################################################################
 on damage:
 	if attacker is a player:
-		set {lastattacked::%attacker%} to victim
-		set {_job} = {stats::%attacker%::job}
-		set {_dmg} = damage
+		if victim is a player:
+			set {lastattacked::%attacker%} to "%victim%"
+		set {_job} to {stats::%attacker%::job}
+		set {_dmg} to damage
 
 		if {_job} is "검사(서양)" and hasSkillUnlocked(attacker, "오러") is true:
-			set {_dmg} = {_dmg} * 1.15
+			set {_dmg} to {_dmg} * 1.15
 		else if {_job} is "검사(동양)" and hasSkillUnlocked(attacker, "기") is true:
-			set {_dmg} = {_dmg} * 1.20
+			set {_dmg} to {_dmg} * 1.20
 
 		if {_job} is "궁수" and hasSkillUnlocked(attacker, "숙련된 궁술실력") is true and tool of attacker is bow:
-			set {_dmg} = {_dmg} * 1.10
+			set {_dmg} to {_dmg} * 1.10
 
 		if {buff::%attacker%::manablade::until} is set:
 			if now < {buff::%attacker%::manablade::until}:
 				if hasMana(attacker, 5) is true:
 					useMana(attacker, 5)
-					set {_dmg} = ({_dmg} * 1.30) + 5
+					set {_dmg} to ({_dmg} * 1.30) + 5
 
 		if {buff::%attacker%::hellfire::until} is set:
 			if now < {buff::%attacker%::hellfire::until}:
@@ -381,7 +393,7 @@ on damage:
 
 		if {buff::%attacker%::backstab::until} is set:
 			if now < {buff::%attacker%::backstab::until}:
-				set {_dmg} = {_dmg} * 3
+				set {_dmg} to {_dmg} * 3
 				delete {buff::%attacker%::backstab::until}
 				if victim is a player:
 					set {stats::%victim%::silenced} to true
@@ -391,15 +403,15 @@ on damage:
 			remove invisibility from attacker
 
 		if {_job} is "운명개변자":
-			set {_r} = random number between 0.0 and 1.0
+			set {_r} to random number between 0.0 and 1.0
 			if {_r} <= 0.0001:
-				set {_dmg} = {_dmg} * 1000
+				set {_dmg} to {_dmg} * 1000
 			else if {_r} <= 0.0011:
-				set {_dmg} = {_dmg} * 2
+				set {_dmg} to {_dmg} * 2
 			else if {_r} <= 0.0021:
-				set {_dmg} = {_dmg} * 3
+				set {_dmg} to {_dmg} * 3
 			else if {_r} <= 0.0521:
-				set {_dmg} = {_dmg} * 1.5
+				set {_dmg} to {_dmg} * 1.5
 			if hasSkillUnlocked(attacker, "랜덤스킬발동(상급)") is true and random number between 0.0 and 1.0 <= 0.05:
 				castRandomSkill(attacker, 40, 50)
 			else if hasSkillUnlocked(attacker, "랜덤스킬발동(중급)") is true and random number between 0.0 and 1.0 <= 0.05:
@@ -410,14 +422,14 @@ on damage:
 		set damage to {_dmg}
 
 	if victim is a player:
-		set {_vjob} = {stats::%victim%::job}
+		set {_vjob} to {stats::%victim%::job}
 
 		if {_vjob} is "마법사" and hasSkillUnlocked(victim, "마나쉴드") is true:
-			set {_shield} = {stats::%victim%::manashield} ? 0
+			set {_shield} to {stats::%victim%::manashield} ? 0
 			if {_shield} > 0:
-				set {_absorb} = damage
+				set {_absorb} to damage
 				if {_absorb} > {_shield}:
-					set {_absorb} = {_shield}
+					set {_absorb} to {_shield}
 				subtract {_absorb} from {stats::%victim%::manashield}
 				set damage to damage - {_absorb}
 				if {stats::%victim%::manashield} <= 0:
@@ -466,14 +478,14 @@ on break of sand, sandstone, red sand, stone, cobblestone, deepslate:
 					grantTitle(player, "유물 수집가")
 
 function doArchaeologySearch(p: player):
-	set {_found} = false
+	set {_found} to false
 	loop {jobdata::list::*}:
 		if {jobdata::hidden::%loop-value%} is true:
 			if {joblocation::%loop-value%::world} is set:
 				if {joblocation::%loop-value%::world} is "%world of {_p}%":
-					set {_loc} = location({joblocation::%loop-value%::x}, {joblocation::%loop-value%::y}, {joblocation::%loop-value%::z}, world of {_p})
+					set {_loc} to location({joblocation::%loop-value%::x}, {joblocation::%loop-value%::y}, {joblocation::%loop-value%::z}, world of {_p})
 					if distanceBetween(location of {_p}, {_loc}) <= 500:
-						set {_found} = true
+						set {_found} to true
 	if {_found} is true:
 		send "<gold>[탐색] 근처에서 알 수 없는 기운이 느껴진다..." to {_p}
 	else:
@@ -484,7 +496,7 @@ function nearestHiddenJobLocation(p: player) :: text:
 		if {jobdata::hidden::%loop-value%} is true:
 			if {joblocation::%loop-value%::world} is set:
 				if {joblocation::%loop-value%::world} is "%world of {_p}%":
-					set {_loc} = location({joblocation::%loop-value%::x}, {joblocation::%loop-value%::y}, {joblocation::%loop-value%::z}, world of {_p})
+					set {_loc} to location({joblocation::%loop-value%::x}, {joblocation::%loop-value%::y}, {joblocation::%loop-value%::z}, world of {_p})
 					if distanceBetween(location of {_p}, {_loc}) <= 3:
 						return loop-value
 	return ""
@@ -494,7 +506,7 @@ command /흡수:
 		if hasSkillUnlocked(player, "흡수") is false:
 			send "<red>흡수 스킬을 아직 습득하지 못했습니다 (고고학자 20Lv)." to player
 			stop
-		set {_job} = nearestHiddenJobLocation(player)
+		set {_job} to nearestHiddenJobLocation(player)
 		if {_job} is "" or {_job} is {stats::%player%::job}:
 			send "<red>다른 히든 직업의 전직 장소 근처에서만 사용할 수 있습니다." to player
 			stop
@@ -505,20 +517,20 @@ command /흡수:
 		if size of {_pool::*} <= 0:
 			send "<red>흡수할 수 있는 스킬이 없습니다." to player
 			stop
-		set {_pick} = a random element out of {_pool::*}
+		set {_pick} to a random element out of {_pool::*}
 		give player a book named "<aqua>[스킬북] %{_pick}%" with lore "<gray>우클릭하여 사용 (일회성)" and "<dark_gray>출처: %{_job}%"
 		send "<green>[흡수] %{_job}%의 스킬 [%{_pick}%] 을(를) 스킬북으로 흡수했습니다!" to player
 
 on right click:
 	if tool is a book:
 		if display name of tool starts with "<aqua>[스킬북] ":
-			set {_skillname} = display name of tool
+			set {_skillname} to display name of tool
 			replace "<aqua>[스킬북] " in {_skillname} with ""
 			executeActiveSkill(player, {_skillname})
-			set {_mimicactive} = false
+			set {_mimicactive} to false
 			if {buff::%player%::mimicdimension::until} is set:
 				if now < {buff::%player%::mimicdimension::until}:
-					set {_mimicactive} = true
+					set {_mimicactive} to true
 			if {_mimicactive} is false:
 				remove 1 of tool from player
 
@@ -526,265 +538,370 @@ on right click:
 # 스킬 실행 디스패치
 ########################################################################
 function executeActiveSkill(p: player, skill: text):
-	set {_lvl} = {jobdata::skillreq::%{_skill}%}
+	set {_lvl} to {jobdata::skillreq::%{_skill}%}
 
 	# ---------------- 검사(서양) ----------------
 	if {_skill} is "패링":
-		if isOnCooldown({_p}, "패링", 6) is true: stop
+		if isOnCooldown({_p}, "패링", 6) is true:
+			stop
 		setCooldown({_p}, "패링")
 		apply potion effect of resistance of tier 5 to {_p} for 2 ticks
 		send action bar "<gray>[패링] 방어 태세!" to {_p}
 
 	else if {_skill} is "가르기":
-		if isOnCooldown({_p}, "가르기", 30) is true: stop
-		if hasMana({_p}, 15) is false: stop
-		setCooldown({_p}, "가르기") ; useMana({_p}, 15)
-		set {_dmg} = 30 + (getStr({_p}) * 0.05)
+		if isOnCooldown({_p}, "가르기", 30) is true:
+			stop
+		if hasMana({_p}, 15) is false:
+			stop
+		setCooldown({_p}, "가르기")
+		useMana({_p}, 15)
+		set {_dmg} to 30 + (getStr({_p}) * 0.05)
 		playCrescentEffect({_p})
 		damageNearbyEnemies({_p}, 5, {_dmg})
 
 	else if {_skill} is "스턴패링":
-		if isOnCooldown({_p}, "스턴패링", 25) is true: stop
-		if hasMana({_p}, 20) is false: stop
-		setCooldown({_p}, "스턴패링") ; useMana({_p}, 20)
+		if isOnCooldown({_p}, "스턴패링", 25) is true:
+			stop
+		if hasMana({_p}, 20) is false:
+			stop
+		setCooldown({_p}, "스턴패링")
+		useMana({_p}, 20)
 		apply potion effect of resistance of tier 10 to {_p} for 6 ticks
 		stunNearbyEnemies({_p}, 3, 3)
 		send action bar "<gold>[스턴패링] 주변의 적을 기절시켰습니다!" to {_p}
 
 	else if {_skill} is "마나블레이드":
-		if isOnCooldown({_p}, "마나블레이드", 90) is true: stop
-		if hasMana({_p}, 30) is false: stop
-		setCooldown({_p}, "마나블레이드") ; useMana({_p}, 30)
+		if isOnCooldown({_p}, "마나블레이드", 90) is true:
+			stop
+		if hasMana({_p}, 30) is false:
+			stop
+		setCooldown({_p}, "마나블레이드")
+		useMana({_p}, 30)
 		set {buff::%{_p}%::manablade::until} to (now + 15 seconds)
 		send action bar "<light_purple>[마나블레이드] 15초간 검에 오러가 깃듭니다!" to {_p}
 
 	# ---------------- 검사(동양) ----------------
 	else if {_skill} is "검기":
-		if isOnCooldown({_p}, "검기", 30) is true: stop
-		if hasMana({_p}, 20) is false: stop
-		setCooldown({_p}, "검기") ; useMana({_p}, 20)
+		if isOnCooldown({_p}, "검기", 30) is true:
+			stop
+		if hasMana({_p}, 20) is false:
+			stop
+		setCooldown({_p}, "검기")
+		useMana({_p}, 20)
 		playLineBeamEffect({_p}, 12)
 		damageFirstEntityInLine({_p}, 12, 24)
 
 	else if {_skill} is "카운터":
-		if isOnCooldown({_p}, "카운터", 30) is true: stop
-		if hasMana({_p}, 15) is false: stop
-		setCooldown({_p}, "카운터") ; useMana({_p}, 15)
+		if isOnCooldown({_p}, "카운터", 30) is true:
+			stop
+		if hasMana({_p}, 15) is false:
+			stop
+		setCooldown({_p}, "카운터")
+		useMana({_p}, 15)
 		set {buff::%{_p}%::counter::until} to (now + 4 ticks)
 		send action bar "<aqua>[카운터] 0.2초간 무적!" to {_p}
 
 	else if {_skill} is "섬멸":
-		if isOnCooldown({_p}, "섬멸", 100) is true: stop
-		if hasMana({_p}, 40) is false: stop
-		setCooldown({_p}, "섬멸") ; useMana({_p}, 40)
-		set {_dmg} = 60 + (getStr({_p}) * 0.10)
+		if isOnCooldown({_p}, "섬멸", 100) is true:
+			stop
+		if hasMana({_p}, 40) is false:
+			stop
+		setCooldown({_p}, "섬멸")
+		useMana({_p}, 40)
+		set {_dmg} to 60 + (getStr({_p}) * 0.10)
 		damageNearbyEnemies({_p}, 10, {_dmg})
 		send action bar "<red>[섬멸] 주변을 모두 베어버렸습니다!" to {_p}
 
 	# ---------------- 마법사 (마법지팡이 필요) ----------------
 	else if {_skill} is "마나볼":
-		if requiresWand({_p}) is false: stop
-		if isOnCooldown({_p}, "마나볼", 3) is true: stop
-		if hasMana({_p}, 10) is false: stop
-		setCooldown({_p}, "마나볼") ; useMana({_p}, 10)
-		set {_dmg} = 15 + (casterPower({_p}) * 0.10)
+		if requiresWand({_p}) is false:
+			stop
+		if isOnCooldown({_p}, "마나볼", 3) is true:
+			stop
+		if hasMana({_p}, 10) is false:
+			stop
+		setCooldown({_p}, "마나볼")
+		useMana({_p}, 10)
+		set {_dmg} to 15 + (casterPower({_p}) * 0.10)
 		playLineBeamEffect({_p}, 15)
 		damageFirstEntityInLine({_p}, 15, {_dmg})
 
 	else if {_skill} is "파이어볼":
-		if requiresWand({_p}) is false: stop
-		if isOnCooldown({_p}, "파이어볼", 15) is true: stop
-		if hasMana({_p}, 20) is false: stop
-		setCooldown({_p}, "파이어볼") ; useMana({_p}, 20)
-		set {_dmg} = 30 + (casterPower({_p}) * 0.10)
-		set {_target} = firstEntityInLine({_p}, 15)
+		if requiresWand({_p}) is false:
+			stop
+		if isOnCooldown({_p}, "파이어볼", 15) is true:
+			stop
+		if hasMana({_p}, 20) is false:
+			stop
+		setCooldown({_p}, "파이어볼")
+		useMana({_p}, 20)
+		set {_dmg} to 30 + (casterPower({_p}) * 0.10)
+		set {_target} to firstEntityInLine({_p}, 15)
 		if {_target} is set:
 			damage {_target} by {_dmg}
 			ignite {_target} for 3 seconds
 			create explosion of force 0 at location of {_target}
 
 	else if {_skill} is "일렉트릭":
-		if requiresWand({_p}) is false: stop
-		if isOnCooldown({_p}, "일렉트릭", 20) is true: stop
-		if hasMana({_p}, 25) is false: stop
-		setCooldown({_p}, "일렉트릭") ; useMana({_p}, 25)
-		set {_dmg} = 40 + (casterPower({_p}) * 0.15)
+		if requiresWand({_p}) is false:
+			stop
+		if isOnCooldown({_p}, "일렉트릭", 20) is true:
+			stop
+		if hasMana({_p}, 25) is false:
+			stop
+		setCooldown({_p}, "일렉트릭")
+		useMana({_p}, 25)
+		set {_dmg} to 40 + (casterPower({_p}) * 0.15)
 		damageLineMultiple({_p}, 15, {_dmg}, 3)
 		stunNearbyEnemies({_p}, 2, 0.5)
 
 	else if {_skill} is "블리자드볼":
-		if requiresWand({_p}) is false: stop
-		if isOnCooldown({_p}, "블리자드볼", 35) is true: stop
-		if hasMana({_p}, 30) is false: stop
-		setCooldown({_p}, "블리자드볼") ; useMana({_p}, 30)
-		set {_loc} = location of {_p}'s target block
+		if requiresWand({_p}) is false:
+			stop
+		if isOnCooldown({_p}, "블리자드볼", 35) is true:
+			stop
+		if hasMana({_p}, 30) is false:
+			stop
+		setCooldown({_p}, "블리자드볼")
+		useMana({_p}, 30)
+		set {_loc} to location of {_p}'s target block
 		loop 3 times:
 			damageInRadius({_p}, {_loc}, 3, (10 + (casterPower({_p}) * 0.05)))
 			wait 1 second
 
 	else if {_skill} is "마나브레스":
-		if requiresWand({_p}) is false: stop
-		if isOnCooldown({_p}, "마나브레스", 60) is true: stop
-		if hasMana({_p}, 45) is false: stop
-		setCooldown({_p}, "마나브레스") ; useMana({_p}, 45)
-		set {_dmg} = 80 + (casterPower({_p}) * 0.20)
+		if requiresWand({_p}) is false:
+			stop
+		if isOnCooldown({_p}, "마나브레스", 60) is true:
+			stop
+		if hasMana({_p}, 45) is false:
+			stop
+		setCooldown({_p}, "마나브레스")
+		useMana({_p}, 45)
+		set {_dmg} to 80 + (casterPower({_p}) * 0.20)
 		damageNearbyEnemies({_p}, 6, {_dmg})
 
 	# ---------------- 궁수 (무한 활 필요) ----------------
 	else if {_skill} is "파워샷":
-		if requiresBow({_p}) is false: stop
-		if isOnCooldown({_p}, "파워샷", 10) is true: stop
-		if hasMana({_p}, 15) is false: stop
-		setCooldown({_p}, "파워샷") ; useMana({_p}, 15)
-		set {_dmg} = 40 + (getAgi({_p}) * 0.10)
+		if requiresBow({_p}) is false:
+			stop
+		if isOnCooldown({_p}, "파워샷", 10) is true:
+			stop
+		if hasMana({_p}, 15) is false:
+			stop
+		setCooldown({_p}, "파워샷")
+		useMana({_p}, 15)
+		set {_dmg} to 40 + (getAgi({_p}) * 0.10)
 		damageFirstEntityInLine({_p}, 25, {_dmg})
 
 	else if {_skill} is "레인애로우":
-		if requiresBow({_p}) is false: stop
-		if isOnCooldown({_p}, "레인애로우", 25) is true: stop
-		if hasMana({_p}, 25) is false: stop
-		setCooldown({_p}, "레인애로우") ; useMana({_p}, 25)
-		set {_loc} = location of {_p}'s target block
-		set {_dmg} = 20 + (getAgi({_p}) * 0.05)
+		if requiresBow({_p}) is false:
+			stop
+		if isOnCooldown({_p}, "레인애로우", 25) is true:
+			stop
+		if hasMana({_p}, 25) is false:
+			stop
+		setCooldown({_p}, "레인애로우")
+		useMana({_p}, 25)
+		set {_loc} to location of {_p}'s target block
+		set {_dmg} to 20 + (getAgi({_p}) * 0.05)
 		loop 3 times:
 			damageInRadius({_p}, {_loc}, 4, {_dmg})
 			wait 0.5 seconds
 
 	else if {_skill} is "파이어애로우":
-		if requiresBow({_p}) is false: stop
-		if isOnCooldown({_p}, "파이어애로우", 20) is true: stop
-		if hasMana({_p}, 20) is false: stop
-		setCooldown({_p}, "파이어애로우") ; useMana({_p}, 20)
-		set {_target} = firstEntityInLine({_p}, 25)
+		if requiresBow({_p}) is false:
+			stop
+		if isOnCooldown({_p}, "파이어애로우", 20) is true:
+			stop
+		if hasMana({_p}, 20) is false:
+			stop
+		setCooldown({_p}, "파이어애로우")
+		useMana({_p}, 20)
+		set {_target} to firstEntityInLine({_p}, 25)
 		if {_target} is set:
 			damage {_target} by (30 + (getAgi({_p}) * 0.10))
 			ignite {_target} for 2 seconds
 
 	else if {_skill} is "속사":
-		if requiresBow({_p}) is false: stop
-		if isOnCooldown({_p}, "속사", 45) is true: stop
-		if hasMana({_p}, 25) is false: stop
-		setCooldown({_p}, "속사") ; useMana({_p}, 25)
+		if requiresBow({_p}) is false:
+			stop
+		if isOnCooldown({_p}, "속사", 45) is true:
+			stop
+		if hasMana({_p}, 25) is false:
+			stop
+		setCooldown({_p}, "속사")
+		useMana({_p}, 25)
 		apply potion effect of speed of tier 1 to {_p} for 60 ticks
 		set {buff::%{_p}%::rapidfire::until} to (now + 3 seconds)
 
 	else if {_skill} is "피날레":
-		if requiresBow({_p}) is false: stop
-		if isOnCooldown({_p}, "피날레", 60) is true: stop
-		if hasMana({_p}, 30) is false: stop
-		setCooldown({_p}, "피날레") ; useMana({_p}, 30)
-		set {_target} = firstEntityInLine({_p}, 25)
+		if requiresBow({_p}) is false:
+			stop
+		if isOnCooldown({_p}, "피날레", 60) is true:
+			stop
+		if hasMana({_p}, 30) is false:
+			stop
+		setCooldown({_p}, "피날레")
+		useMana({_p}, 30)
+		set {_target} to firstEntityInLine({_p}, 25)
 		if {_target} is set:
 			damage {_target} by (health of {_target} * 0.15)
 
 	# ---------------- 힐러 ----------------
 	else if {_skill} is "힐":
-		if isOnCooldown({_p}, "힐", 8) is true: stop
-		if hasMana({_p}, 15) is false: stop
-		setCooldown({_p}, "힐") ; useMana({_p}, 15)
+		if isOnCooldown({_p}, "힐", 8) is true:
+			stop
+		if hasMana({_p}, 15) is false:
+			stop
+		setCooldown({_p}, "힐")
+		useMana({_p}, 15)
 		healTarget({_p}, 30 + (casterPower({_p}) * 0.10))
 
 	else if {_skill} is "그레이트힐":
-		if isOnCooldown({_p}, "그레이트힐", 20) is true: stop
-		if hasMana({_p}, 25) is false: stop
-		setCooldown({_p}, "그레이트힐") ; useMana({_p}, 25)
+		if isOnCooldown({_p}, "그레이트힐", 20) is true:
+			stop
+		if hasMana({_p}, 25) is false:
+			stop
+		setCooldown({_p}, "그레이트힐")
+		useMana({_p}, 25)
 		healTarget({_p}, 60 + (casterPower({_p}) * 0.15))
 
 	else if {_skill} is "영역힐":
-		if isOnCooldown({_p}, "영역힐", 40) is true: stop
-		if hasMana({_p}, 35) is false: stop
-		setCooldown({_p}, "영역힐") ; useMana({_p}, 35)
+		if isOnCooldown({_p}, "영역힐", 40) is true:
+			stop
+		if hasMana({_p}, 35) is false:
+			stop
+		setCooldown({_p}, "영역힐")
+		useMana({_p}, 35)
 		loop 5 times:
 			healAlliesInRadius({_p}, 5, (25 + (casterPower({_p}) * 0.10)))
 			wait 1 second
 
 	else if {_skill} is "성스러운심판":
-		if isOnCooldown({_p}, "성스러운심판", 30) is true: stop
-		if hasMana({_p}, 25) is false: stop
-		setCooldown({_p}, "성스러운심판") ; useMana({_p}, 25)
-		set {_target} = firstEntityInLine({_p}, 10)
+		if isOnCooldown({_p}, "성스러운심판", 30) is true:
+			stop
+		if hasMana({_p}, 25) is false:
+			stop
+		setCooldown({_p}, "성스러운심판")
+		useMana({_p}, 25)
+		set {_target} to firstEntityInLine({_p}, 10)
 		if {_target} is set:
 			if {_target} is a zombie or {_target} is a skeleton or {_target} is a zombie villager or {_target} is a husk or {_target} is a drowned or {_target} is a stray or {_target} is a wither skeleton:
 				damage {_target} by (50 + (casterPower({_p}) * 0.20))
 				apply potion effect of slowness of tier 2 to {_target} for 40 ticks
 
 	else if {_skill} is "절대영역힐":
-		if isOnCooldown({_p}, "절대영역힐", 90) is true: stop
-		if hasMana({_p}, 50) is false: stop
-		setCooldown({_p}, "절대영역힐") ; useMana({_p}, 50)
+		if isOnCooldown({_p}, "절대영역힐", 90) is true:
+			stop
+		if hasMana({_p}, 50) is false:
+			stop
+		setCooldown({_p}, "절대영역힐")
+		useMana({_p}, 50)
 		healAlliesInRadius({_p}, 6, (100 + (casterPower({_p}) * 0.20)))
-		apply potion effect of regeneration of tier 2 to all players in radius 6 of {_p} for 100 ticks
+		loop all players in world of {_p}:
+			if distanceBetween(location of loop-player, location of {_p}) <= 6:
+				set {_isally3} to isSameTeam({_p}, loop-player)
+				if loop-player is {_p}:
+					apply potion effect of regeneration of tier 2 to loop-player for 100 ticks
+				else if {_isally3} is true:
+					apply potion effect of regeneration of tier 2 to loop-player for 100 ticks
 
 	# ---------------- 탱커 ----------------
 	else if {_skill} is "성벽":
-		if isOnCooldown({_p}, "성벽", 35) is true: stop
-		if hasMana({_p}, 20) is false: stop
-		setCooldown({_p}, "성벽") ; useMana({_p}, 20)
+		if isOnCooldown({_p}, "성벽", 35) is true:
+			stop
+		if hasMana({_p}, 20) is false:
+			stop
+		setCooldown({_p}, "성벽")
+		useMana({_p}, 20)
 		set {buff::%{_p}%::wall::until} to (now + 3 seconds)
 		tauntNearbyMobs({_p}, 8)
 
 	else if {_skill} is "돌진":
-		if isOnCooldown({_p}, "돌진", 20) is true: stop
-		if hasMana({_p}, 15) is false: stop
-		setCooldown({_p}, "돌진") ; useMana({_p}, 15)
-		set {_dmg} = 25 + (getVit({_p}) * 0.05)
-		push {_p} in facing direction of {_p} with speed 2
+		if isOnCooldown({_p}, "돌진", 20) is true:
+			stop
+		if hasMana({_p}, 15) is false:
+			stop
+		setCooldown({_p}, "돌진")
+		useMana({_p}, 15)
+		set {_dmg} to 25 + (getVit({_p}) * 0.05)
+		push {_p} towards (location 5 blocks in front of {_p}) at speed 2
 		damageLineMultiple({_p}, 5, {_dmg}, 5)
 		stunNearbyEnemies({_p}, 5, 1)
 
 	else if {_skill} is "자폭":
-		if isOnCooldown({_p}, "자폭", 100) is true: stop
+		if isOnCooldown({_p}, "자폭", 100) is true:
+			stop
 		setCooldown({_p}, "자폭")
-		set {_lost} = (health of {_p}) / 2
+		set {_lost} to (health of {_p}) / 2
 		damage {_p} by {_lost}
 		damageNearbyEnemies({_p}, 8, {_lost})
 
 	# ---------------- 마검사 ----------------
 	else if {_skill} is "파이어소드":
-		if isOnCooldown({_p}, "파이어소드", 10) is true: stop
-		if hasMana({_p}, 15) is false: stop
-		setCooldown({_p}, "파이어소드") ; useMana({_p}, 15)
-		set {_target} = firstEntityInLine({_p}, 3)
+		if isOnCooldown({_p}, "파이어소드", 10) is true:
+			stop
+		if hasMana({_p}, 15) is false:
+			stop
+		setCooldown({_p}, "파이어소드")
+		useMana({_p}, 15)
+		set {_target} to firstEntityInLine({_p}, 3)
 		if {_target} is set:
 			damage {_target} by (20 + (getStr({_p}) * 0.05))
 			ignite {_target} for 2 seconds
 
 	else if {_skill} is "일렉트릭소드":
-		if isOnCooldown({_p}, "일렉트릭소드", 15) is true: stop
-		if hasMana({_p}, 18) is false: stop
-		setCooldown({_p}, "일렉트릭소드") ; useMana({_p}, 18)
-		set {_target} = firstEntityInLine({_p}, 3)
+		if isOnCooldown({_p}, "일렉트릭소드", 15) is true:
+			stop
+		if hasMana({_p}, 18) is false:
+			stop
+		setCooldown({_p}, "일렉트릭소드")
+		useMana({_p}, 18)
+		set {_target} to firstEntityInLine({_p}, 3)
 		if {_target} is set:
 			damage {_target} by (25 + (getStr({_p}) * 0.07))
 			apply potion effect of slowness of tier 10 to {_target} for 10 ticks
 
 	else if {_skill} is "브레이크소드":
-		if isOnCooldown({_p}, "브레이크소드", 20) is true: stop
-		if hasMana({_p}, 18) is false: stop
-		setCooldown({_p}, "브레이크소드") ; useMana({_p}, 18)
-		set {_target} = firstEntityInLine({_p}, 3)
+		if isOnCooldown({_p}, "브레이크소드", 20) is true:
+			stop
+		if hasMana({_p}, 18) is false:
+			stop
+		setCooldown({_p}, "브레이크소드")
+		useMana({_p}, 18)
+		set {_target} to firstEntityInLine({_p}, 3)
 		if {_target} is set:
 			damage {_target} by (30 + (getStr({_p}) * 0.10))
 			apply potion effect of weakness of tier 1 to {_target} for 60 ticks
 
 	else if {_skill} is "스타소드":
-		if isOnCooldown({_p}, "스타소드", 30) is true: stop
-		if hasMana({_p}, 22) is false: stop
-		setCooldown({_p}, "스타소드") ; useMana({_p}, 22)
+		if isOnCooldown({_p}, "스타소드", 30) is true:
+			stop
+		if hasMana({_p}, 22) is false:
+			stop
+		setCooldown({_p}, "스타소드")
+		useMana({_p}, 22)
 		damageNearbyEnemies({_p}, 4, (45 + (getStr({_p}) * 0.15)))
 
 	else if {_skill} is "성군베기":
-		if isOnCooldown({_p}, "성군베기", 40) is true: stop
-		if hasMana({_p}, 28) is false: stop
-		setCooldown({_p}, "성군베기") ; useMana({_p}, 28)
-		set {_dmg} = 55 + (getStr({_p}) * 0.15)
+		if isOnCooldown({_p}, "성군베기", 40) is true:
+			stop
+		if hasMana({_p}, 28) is false:
+			stop
+		setCooldown({_p}, "성군베기")
+		useMana({_p}, 28)
+		set {_dmg} to 55 + (getStr({_p}) * 0.15)
 		damageLineMultiple({_p}, 8, {_dmg}, 10)
 		stunNearbyEnemies({_p}, 8, 1)
 
 	else if {_skill} is "헬파이어소드":
-		if isOnCooldown({_p}, "헬파이어소드", 60) is true: stop
-		if hasMana({_p}, 30) is false: stop
-		setCooldown({_p}, "헬파이어소드") ; useMana({_p}, 30)
+		if isOnCooldown({_p}, "헬파이어소드", 60) is true:
+			stop
+		if hasMana({_p}, 30) is false:
+			stop
+		setCooldown({_p}, "헬파이어소드")
+		useMana({_p}, 30)
 		set {buff::%{_p}%::hellfire::until} to (now + 5 seconds)
 		apply potion effect of speed of tier 1 to {_p} for 100 ticks
 
@@ -794,10 +911,13 @@ function executeActiveSkill(p: player, skill: text):
 
 	# ---------------- 약탈자 ----------------
 	else if {_skill} is "스킬봉인":
-		if isOnCooldown({_p}, "스킬봉인", 30) is true: stop
-		if hasMana({_p}, 20) is false: stop
-		setCooldown({_p}, "스킬봉인") ; useMana({_p}, 20)
-		set {_target} = firstEntityInLine({_p}, 3)
+		if isOnCooldown({_p}, "스킬봉인", 30) is true:
+			stop
+		if hasMana({_p}, 20) is false:
+			stop
+		setCooldown({_p}, "스킬봉인")
+		useMana({_p}, 20)
+		set {_target} to firstEntityInLine({_p}, 3)
 		if {_target} is a player:
 			set {stats::%{_target}%::silenced} to true
 			send "<red>스킬이 5초간 봉인되었습니다!" to {_target}
@@ -805,23 +925,30 @@ function executeActiveSkill(p: player, skill: text):
 			set {stats::%{_target}%::silenced} to false
 
 	else if {_skill} is "은신":
-		if isOnCooldown({_p}, "은신", 45) is true: stop
-		if hasMana({_p}, 30) is false: stop
-		setCooldown({_p}, "은신") ; useMana({_p}, 30)
+		if isOnCooldown({_p}, "은신", 45) is true:
+			stop
+		if hasMana({_p}, 30) is false:
+			stop
+		setCooldown({_p}, "은신")
+		useMana({_p}, 30)
 		apply potion effect of invisibility to {_p} for 200 ticks
 		apply potion effect of speed of tier 1 to {_p} for 200 ticks
 		set {buff::%{_p}%::stealth::until} to (now + 10 seconds)
 
 	else if {_skill} is "비겁한습격":
-		if isOnCooldown({_p}, "비겁한습격", 60) is true: stop
-		if hasMana({_p}, 25) is false: stop
-		setCooldown({_p}, "비겁한습격") ; useMana({_p}, 25)
+		if isOnCooldown({_p}, "비겁한습격", 60) is true:
+			stop
+		if hasMana({_p}, 25) is false:
+			stop
+		setCooldown({_p}, "비겁한습격")
+		useMana({_p}, 25)
 		set {buff::%{_p}%::backstab::until} to (now + 5 seconds)
 		send action bar "<dark_red>[비겁한습격] 다음 공격이 3배 피해를 입힙니다." to {_p}
 
 	# ---------------- 모방자 ----------------
 	else if {_skill} is "모방차원":
-		if isOnCooldown({_p}, "모방차원", 90) is true: stop
+		if isOnCooldown({_p}, "모방차원", 90) is true:
+			stop
 		setCooldown({_p}, "모방차원")
 		set {buff::%{_p}%::mimicdimension::until} to (now + 10 seconds)
 		send action bar "<aqua>[모방차원] 10초간 복사한 스킬을 모두 사용할 수 있습니다." to {_p}
@@ -862,11 +989,11 @@ function cookGradeHeal(grade: text) :: number:
 	return 10
 
 function rollCookGrade(p: player) :: text:
-	set {_r} = random number between 0.0 and 100.0
+	set {_r} to random number between 0.0 and 100.0
 	if hasSkillUnlocked({_p}, "요리실력") is true:
-		set {_r} = {_r} - 10
+		set {_r} to {_r} - 10
 	if hasSkillUnlocked({_p}, "요리확률증가") is true:
-		set {_r} = {_r} - 10
+		set {_r} to {_r} - 10
 	if {_r} <= 1:
 		return "신화"
 	else if {_r} <= 5:
@@ -882,12 +1009,12 @@ command /요리:
 		if {stats::%player%::job} is not "요리사":
 			send "<red>요리사만 사용할 수 있는 명령어입니다." to player
 			stop
-		set {_grade} = rollCookGrade(player)
-		set {_heal} = cookGradeHeal({_grade})
+		set {_grade} to rollCookGrade(player)
+		set {_heal} to cookGradeHeal({_grade})
 		if hasSkillUnlocked(player, "가니쉬추가") is true:
-			set {_heal} = {_heal} * 1.1
+			set {_heal} to {_heal} * 1.1
 		if hasSkillUnlocked(player, "소스추가") is true:
-			set {_heal} = {_heal} * 1.1
+			set {_heal} to {_heal} * 1.1
 		give player a cooked beef named "%cookColor({_grade})%[%{_grade}%] 특제 요리" with lore "<gray>회복량: %{_heal}%"
 		send "<green>[요리] <white>%{_grade}%<green> 등급 요리를 완성했습니다!" to player
 		if hasSkillUnlocked(player, "국물뿌리기") is true:
@@ -898,7 +1025,7 @@ command /요리:
 
 on eat:
 	if display name of tool contains "특제 요리":
-		set {_grade} = "일반"
+		set {_grade} to "일반"
 		if display name of tool contains "신화":
 			set {_grade} to "신화"
 		else if display name of tool contains "전설":
@@ -915,7 +1042,7 @@ on eat:
 # "가상 재료" 로 취급하며, display name 으로 판별한다.
 ########################################################################
 function openSmithGUI(p: player):
-	open chest inventory with size 27 named "<gray>강철의 심장 - 대장간" to {_p}
+	open chest inventory with 3 rows named "<gray>강철의 심장 - 대장간" to {_p}
 	set slot 10 of {_p}'s current inventory to anvil named "<yellow>강화" with lore "<gray>강화석 소모, 최대 +15" and "<gray>손에 든 무기를 강화합니다"
 	set slot 11 of {_p}'s current inventory to fire charge named "<red>속성부여" with lore "<gray>무기에 일회성 랜덤 속성 부여(5회 지속)"
 	set slot 12 of {_p}'s current inventory to nether star named "<light_purple>고정속성부여" with lore "<gray>속성석 소모, 영구 속성 각인"
@@ -938,7 +1065,7 @@ function consumeMaterial(p: player, name: text, amount: number):
 
 # 강화 단계는 아이템 lore 의 2번째 줄에 순수 숫자로 저장한다 (문자열 파싱 오류 방지)
 function getEnhanceLevel(item: item) :: number:
-	set {_line} = the 2nd line of the lore of {_item}
+	set {_line} to the 2nd line of the lore of {_item}
 	if {_line} is set:
 		if {_line} is a number:
 			return {_line} parsed as integer
@@ -947,58 +1074,59 @@ function getEnhanceLevel(item: item) :: number:
 on inventory click:
 	if name of event-inventory is "<gray>강철의 심장 - 대장간":
 		cancel event
-		set {_p} = player
-		set {_tool} = tool of {_p}
-		if clicked item is anvil:
+		set {_p} to player
+		set {_tool} to tool of {_p}
+		set {_slotnum} to index of event-slot
+		if {_slotnum} is 10:
 			if itemHasMaterial({_p}, "<gray>강화석") is false:
 				send "<red>강화석이 필요합니다." to {_p}
 				stop
-			set {_lvl} = getEnhanceLevel({_tool})
+			set {_lvl} to getEnhanceLevel({_tool})
 			if {_lvl} >= 15:
 				send "<red>이미 최대 강화 단계(+15)입니다." to {_p}
 				stop
 			consumeMaterial({_p}, "<gray>강화석", 1)
-			set {_failchance} = {_lvl} * 0.05
+			set {_failchance} to {_lvl} * 0.05
 			if random number between 0.0 and 1.0 < {_failchance}:
 				send "<red>[강화 실패] 아이템 강화에 실패했습니다." to {_p}
 				stop
-			set {_newlvl} = {_lvl} + 1
+			set {_newlvl} to {_lvl} + 1
 			set the 1st line of the lore of {_tool} to "<yellow>강화 단계: +%{_newlvl}%"
 			set the 2nd line of the lore of {_tool} to "%{_newlvl}%"
 			grantTitle({_p}, "대장장이의 벗")
 			if {_newlvl} >= 15:
 				grantTitle({_p}, "강화의 끝")
 			send "<green>[강화 성공] 현재 강화 단계: +%{_newlvl}%" to {_p}
-		else if clicked item is fire charge:
+		else if {_slotnum} is 11:
 			set the display name of {_tool} to "%display name of {_tool}% <red>[속성:랜덤]"
 			send "<green>무기에 랜덤 속성을 부여했습니다 (5회 공격 지속)." to {_p}
-		else if clicked item is nether star:
+		else if {_slotnum} is 12:
 			if itemHasMaterial({_p}, "<gray>속성석") is false:
 				send "<red>속성석이 필요합니다." to {_p}
 				stop
 			consumeMaterial({_p}, "<gray>속성석", 1)
 			set the display name of {_tool} to "%display name of {_tool}% <gold>[고정속성:화염]"
 			send "<green>무기에 고정 속성을 영구 각인했습니다 (해당 속성 피해+15%%)." to {_p}
-		else if clicked item is dragon breath:
+		else if {_slotnum} is 14:
 			if itemHasMaterial({_p}, "<gray>진화의 결정") is false:
 				send "<red>진화의 결정이 필요합니다." to {_p}
 				stop
 			consumeMaterial({_p}, "<gray>진화의 결정", 1)
 			set the display name of {_tool} to "%display name of {_tool}% <green>[진화됨 +20%%]"
 			send "<green>장비가 상위 등급으로 진화했습니다!" to {_p}
-		else if clicked item is paper:
+		else if {_slotnum} is 15:
 			if itemHasMaterial({_p}, "<gray>룬 재료") is false:
 				send "<red>룬 재료가 3개 필요합니다." to {_p}
 				stop
 			consumeMaterial({_p}, "<gray>룬 재료", 3)
 			give {_p} a paper named "<aqua>룬" with lore "<gray>우클릭하여 무기에 각인"
 			send "<green>룬을 제작했습니다." to {_p}
-		else if clicked item is enchanted book:
+		else if {_slotnum} is 16:
 			if itemHasMaterial({_p}, "<aqua>룬") is false:
 				send "<red>각인할 룬이 없습니다." to {_p}
 				stop
-			set {_runecount} = 0
-			set {_lore} = lore of {_tool}
+			set {_runecount} to 0
+			set {_lore} to lore of {_tool}
 			loop {_lore}:
 				if loop-value contains "룬 각인":
 					add 1 to {_runecount}
@@ -1007,7 +1135,7 @@ on inventory click:
 				stop
 			consumeMaterial({_p}, "<aqua>룬", 1)
 			enchant {_tool} with unbreaking 1
-			set {_newrunecount} = {_runecount} + 1
+			set {_newrunecount} to {_runecount} + 1
 			send "<green>무기에 룬을 각인했습니다. (%{_newrunecount}%/3)" to {_p}
 
 ########################################################################
@@ -1018,11 +1146,15 @@ command /스킬모방:
 		if {stats::%player%::job} is not "모방자":
 			send "<red>모방자만 사용할 수 있습니다." to player
 			stop
-		set {_target} = {lastattacked::%player%}
-		if {_target} is not set or {_target} is not a player:
+		set {_targetname} to {lastattacked::%player%}
+		if {_targetname} is not set:
 			send "<red>최근 공격한 대상이 없습니다." to player
 			stop
-		set {_job} = {stats::%{_target}%::job}
+		set {_target} to findOnlinePlayer({_targetname})
+		if {_target} is not set:
+			send "<red>대상이 현재 접속중이 아닙니다." to player
+			stop
+		set {_job} to {stats::%{_target}%::job}
 		if {_job} is "" or {_job} is not set:
 			send "<red>대상에게 직업이 없습니다." to player
 			stop
@@ -1033,7 +1165,7 @@ command /스킬모방:
 		if size of {_pool::*} <= 0:
 			send "<red>모방할 수 있는 스킬이 없습니다." to player
 			stop
-		set {_pick} = a random element out of {_pool::*}
+		set {_pick} to a random element out of {_pool::*}
 		give player a book named "<aqua>[스킬북] %{_pick}%" with lore "<gray>우클릭하여 사용 (일회성)" and "<dark_gray>모방 출처: %{_target}%"
 		add 1 to {stats::%player%::mimickedcount}
 		if {stats::%player%::mimickedcount} >= 20:
@@ -1045,10 +1177,14 @@ command /무기모방:
 		if hasSkillUnlocked(player, "무기모방") is false:
 			send "<red>무기모방 스킬을 아직 습득하지 못했습니다 (모방자 20Lv)." to player
 			stop
-		set {_target} = {lastattacked::%player%}
-		if {_target} is not set or {_target} is not a player:
+		set {_targetname} to {lastattacked::%player%}
+		if {_targetname} is not set:
 			send "<red>최근 공격한 대상이 없습니다." to player
 			stop
-		set {_item} = tool of {_target}
+		set {_target} to findOnlinePlayer({_targetname})
+		if {_target} is not set:
+			send "<red>대상이 현재 접속중이 아닙니다." to player
+			stop
+		set {_item} to tool of {_target}
 		give player a clay ball named "<aqua>%display name of {_item}% (모방점토 ver.)" with lore "<gray>모방자 전용 복제품"
 		send "<green>[무기모방] %{_target}%의 무기를 모방했습니다!" to player

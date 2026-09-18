@@ -43,24 +43,24 @@ function colorForGrade(grade: text) :: text:
 # 닉네임 표시: [칭호] PlayerName [Lv.42]  (카르마 2 이상이면 이름이 빨간색)
 # ------------------------------------------------------------------
 function updateDisplayName(p: player):
-	set {_lvl} = {stats::%{_p}%::level}
+	set {_lvl} to {stats::%{_p}%::level}
 	if {_lvl} is not set:
-		set {_lvl} = 1
-	set {_title} = {stats::%{_p}%::activetitle}
+		set {_lvl} to 1
+	set {_title} to {stats::%{_p}%::activetitle}
 	if {_title} is not set or {_title} is "":
-		set {_prefix} = ""
+		set {_prefix} to ""
 	else:
-		set {_grade} = {titledata::grade::%{_title}%}
-		set {_color} = colorForGrade({_grade})
-		set {_prefix} = "%{_color}%[%{_title}%]<reset> "
-	set {_karma} = {stats::%{_p}%::karma}
+		set {_grade} to {titledata::grade::%{_title}%}
+		set {_color} to colorForGrade({_grade})
+		set {_prefix} to "%{_color}%[%{_title}%]<reset> "
+	set {_karma} to {stats::%{_p}%::karma}
 	if {_karma} is not set:
-		set {_karma} = 0
+		set {_karma} to 0
 	if {_karma} >= 2:
-		set {_namecolor} = "<red>"
+		set {_namecolor} to "<red>"
 	else:
-		set {_namecolor} = "<white>"
-	set {_display} = "%{_prefix}%%{_namecolor}%%{_p}%<reset> <gray>[Lv.%{_lvl}%]<reset>"
+		set {_namecolor} to "<white>"
+	set {_display} to "%{_prefix}%%{_namecolor}%%{_p}%<reset> <gray>[Lv.%{_lvl}%]<reset>"
 	set the display name of {_p} to parsed text from {_display}
 	set the tab list name of {_p} to parsed text from {_display}
 
@@ -71,8 +71,8 @@ function grantTitle(p: player, titlename: text):
 	if {stats::%{_p}%::titles::%{_titlename}%} is true:
 		stop
 	set {stats::%{_p}%::titles::%{_titlename}%} to true
-	set {_grade} = {titledata::grade::%{_titlename}%}
-	set {_color} = colorForGrade({_grade})
+	set {_grade} to {titledata::grade::%{_titlename}%}
+	set {_color} to colorForGrade({_grade})
 	send "<gold>[칭호 획득]<reset> %{_color}%[%{_titlename}%]<reset> <gray>(%{_grade}%)<reset>" to {_p}
 	play sound "entity.player.levelup" at {_p} with volume 1 for {_p}
 	# 첫 칭호(활성 칭호가 없을 때)라면 자동 장착

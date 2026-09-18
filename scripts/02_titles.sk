@@ -82,7 +82,7 @@ on script load:
 # 몬스터 처치 누적 칭호
 # ------------------------------------------------------------------
 function checkMonsterKillTitles(p: player):
-	set {_k} = {stats::%{_p}%::kills::normal} ? 0
+	set {_k} to {stats::%{_p}%::kills::normal} ? 0
 	if {_k} >= 100:
 		grantTitle({_p}, "학살자")
 	if {_k} >= 1000:
@@ -99,7 +99,7 @@ function checkGuardKillTitles(p: player):
 		grantTitle({_p}, "근위 파괴자")
 
 function checkBossKillTitles(p: player):
-	set {_k} = {stats::%{_p}%::kills::boss} ? 0
+	set {_k} to {stats::%{_p}%::kills::boss} ? 0
 	if {_k} >= 30:
 		grantTitle({_p}, "엘리트 킬러")
 	if {_k} >= 300:
@@ -126,25 +126,25 @@ function checkEvasionTitle(p: player):
 # 칭호 GUI 열기 (7x5 그리드, 페이지 35개, 미보유는 실루엣)
 # ------------------------------------------------------------------
 function openTitleGUI(p: player, page: number):
-	open chest inventory with size 54 named "<dark_purple>칭호 - %{_page}%페이지" to {_p}
-	set {_start} = (({_page} - 1) * 35) + 1
-	set {_end} = {_start} + 34
-	set {_slot} = 0
+	open chest inventory with 6 rows named "<dark_purple>칭호 - %{_page}%페이지" to {_p}
+	set {_start} to (({_page} - 1) * 35) + 1
+	set {_end} to {_start} + 34
+	set {_slot} to 0
 	loop {_end} - {_start} + 1 times:
-		set {_idx} = {_start} + {_slot}
+		set {_idx} to {_start} + {_slot}
 		if {_idx} <= size of {titledata::list::*}:
-			set {_name} = {titledata::list::%{_idx}%}
-			set {_grade} = {titledata::grade::%{_name}%}
-			set {_cond} = {titledata::condition::%{_name}%}
+			set {_name} to {titledata::list::%{_idx}%}
+			set {_grade} to {titledata::grade::%{_name}%}
+			set {_cond} to {titledata::condition::%{_name}%}
 			if hasTitle({_p}, {_name}) is true:
-				set {_item} = paper named "%colorForGrade({_grade})%%{_name}%"
+				set {_item} to paper named "%colorForGrade({_grade})%%{_name}%"
 				if {_name} is {stats::%{_p}%::activetitle}:
 					enchant {_item} with unbreaking 1
 					set {_item} to {_item} with lore "<green>장착중" and "<gray>등급: %{_grade}%"
 				else:
 					set {_item} to {_item} with lore "<yellow>클릭하여 장착" and "<gray>등급: %{_grade}%"
 			else:
-				set {_item} = gray dye named "<dark_gray>???"
+				set {_item} to gray dye named "<dark_gray>???"
 				set {_item} to {_item} with lore "<gray>%{_cond}%" and "<dark_gray>등급: %{_grade}%"
 			set slot ({_slot}) of {_p}'s current inventory to {_item}
 		add 1 to {_slot}
@@ -153,31 +153,31 @@ function openTitleGUI(p: player, page: number):
 	if {_end} < size of {titledata::list::*}:
 		set slot 53 of {_p}'s current inventory to arrow named "<yellow>다음 페이지"
 	set slot 49 of {_p}'s current inventory to barrier named "<red>칭호 해제"
-	set {_p}'s metadata value "titlegui_page" to {_page}
+	set {guipage::%{_p}%} to {_page}
 
 on inventory click:
 	if name of event-inventory contains "칭호 - ":
 		cancel event
-		set {_p} = player
-		set {_page} = {_p}'s metadata value "titlegui_page"
-		if clicked item is arrow named "<yellow>이전 페이지":
+		set {_p} to player
+		set {_page} to {guipage::%{_p}%}
+		set {_slotnum} to index of event-slot
+		if {_slotnum} is 45:
 			openTitleGUI({_p}, {_page} - 1)
 			stop
-		if clicked item is arrow named "<yellow>다음 페이지":
+		if {_slotnum} is 53:
 			openTitleGUI({_p}, {_page} + 1)
 			stop
-		if clicked item is barrier named "<red>칭호 해제":
+		if {_slotnum} is 49:
 			set {stats::%{_p}%::activetitle} to ""
 			updateDisplayName({_p})
 			close {_p}'s inventory
 			stop
-		if clicked item is not air:
-			set {_display} = display name of clicked item
-			loop {titledata::list::*}:
-				if "%{_display}%" contains loop-value:
-					if hasTitle({_p}, loop-value) is true:
-						set {stats::%{_p}%::activetitle} to loop-value
-						updateDisplayName({_p})
-						send "<green>칭호 [%loop-value%] 을(를) 장착했습니다." to {_p}
-						openTitleGUI({_p}, {_page})
-					stop loop
+		if {_slotnum} >= 0 and {_slotnum} <= 34:
+			set {_idx} to ((({_page} - 1) * 35) + {_slotnum}) + 1
+			if {_idx} <= size of {titledata::list::*}:
+				set {_titlename} to {titledata::list::%{_idx}%}
+				if hasTitle({_p}, {_titlename}) is true:
+					set {stats::%{_p}%::activetitle} to {_titlename}
+					updateDisplayName({_p})
+					send "<green>칭호 [%{_titlename}%] 을(를) 장착했습니다." to {_p}
+					openTitleGUI({_p}, {_page})

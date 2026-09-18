@@ -36,7 +36,7 @@ function registerNormalBracket(idx: number, prefix: text, region: text, level: n
 
 on script load:
 	# ---- 20개 브라켓 원본 데이터 ----
-	registerNormalBracket(0,  "썩어가는",     "PLAINS,FOREST", 1,  20,  5,  "낡은 장비",      5,  10)
+	registerNormalBracket(0,  "썩어가는",     "FOREST",        1,  20,  5,  "낡은 장비",      5,  10)
 	registerNormalBracket(1,  "곪아버린",     "FOREST",        6,  38,  8,  "녹슨 파편",      13, 22)
 	registerNormalBracket(2,  "뒤틀린",       "DARK_FOREST",   11, 56,  12, "찢어진 천",      21, 34)
 	registerNormalBracket(3,  "굶주린",       "CAVE",          16, 74,  15, "부러진 뼈",      29, 46)
@@ -58,82 +58,168 @@ on script load:
 	registerNormalBracket(19, "종말의",       "END_BORDER",    96, 362, 68, "종말의 파편",    157, 238)
 
 	# ---- 종족 슬롯 (이름 접미사 / 바닐라 베이스 타입 / 드롭확률 가산 / 4종 특성 사이클) ----
-	set {mobslot::suffix::0} to "좀비"       ; set {mobslot::base::0} to "ZOMBIE"
-	set {mobslot::suffix::1} to "스켈레톤"    ; set {mobslot::base::1} to "SKELETON"
-	set {mobslot::suffix::2} to "거미"       ; set {mobslot::base::2} to "SPIDER"
-	set {mobslot::suffix::3} to "크리퍼"     ; set {mobslot::base::3} to "CREEPER"
-	set {mobslot::suffix::4} to "엔더맨"     ; set {mobslot::base::4} to "ENDERMAN"
+	set {mobslot::suffix::0} to "좀비"
+	set {mobslot::base::0} to "ZOMBIE"
+	set {mobslot::suffix::1} to "스켈레톤"
+	set {mobslot::base::1} to "SKELETON"
+	set {mobslot::suffix::2} to "거미"
+	set {mobslot::base::2} to "SPIDER"
+	set {mobslot::suffix::3} to "크리퍼"
+	set {mobslot::base::3} to "CREEPER"
+	set {mobslot::suffix::4} to "엔더맨"
+	set {mobslot::base::4} to "ENDERMAN"
 	set {mobslot::dropbonus::0} to 30
 	set {mobslot::dropbonus::1} to 35
 	set {mobslot::dropbonus::2} to 40
 	set {mobslot::dropbonus::3} to 45
 	set {mobslot::dropbonus::4} to 50
 
-	set {traitcycle::0::0} to "none"          ; set {traitcycle::1::0} to "poison10"        ; set {traitcycle::2::0} to "bind3s"        ; set {traitcycle::3::0} to "speed10"        ; set {traitcycle::4::0} to "burnonhit"
-	set {traitcycle::0::1} to "reflect20"     ; set {traitcycle::1::1} to "slow2s"           ; set {traitcycle::2::1} to "blind20_2s"    ; set {traitcycle::3::1} to "lowhp30speed30"  ; set {traitcycle::4::1} to "defdown5_3s"
-	set {traitcycle::0::2} to "silence15_2s"  ; set {traitcycle::1::2} to "teleportonhit"    ; set {traitcycle::2::2} to "knockback50"   ; set {traitcycle::3::2} to "bleed25_3s"      ; set {traitcycle::4::2} to "nightatk15"
-	set {traitcycle::0::3} to "lowhp50atk20"  ; set {traitcycle::1::3} to "fear10_2s"        ; set {traitcycle::2::3} to "packbonus10"   ; set {traitcycle::3::3} to "manacost15"      ; set {traitcycle::4::3} to "explodeondeath"
+	set {traitcycle::0::0} to "none"
+	set {traitcycle::1::0} to "poison10"
+	set {traitcycle::2::0} to "bind3s"
+	set {traitcycle::3::0} to "speed10"
+	set {traitcycle::4::0} to "burnonhit"
+	set {traitcycle::0::1} to "reflect20"
+	set {traitcycle::1::1} to "slow2s"
+	set {traitcycle::2::1} to "blind20_2s"
+	set {traitcycle::3::1} to "lowhp30speed30"
+	set {traitcycle::4::1} to "defdown5_3s"
+	set {traitcycle::0::2} to "silence15_2s"
+	set {traitcycle::1::2} to "teleportonhit"
+	set {traitcycle::2::2} to "knockback50"
+	set {traitcycle::3::2} to "bleed25_3s"
+	set {traitcycle::4::2} to "nightatk15"
+	set {traitcycle::0::3} to "lowhp50atk20"
+	set {traitcycle::1::3} to "fear10_2s"
+	set {traitcycle::2::3} to "packbonus10"
+	set {traitcycle::3::3} to "manacost15"
+	set {traitcycle::4::3} to "explodeondeath"
 
 	# ---- 100종 전개 ----
+	# (중첩 loop-number/loop-value 모호성을 피하기 위해 단일 평면 루프(100회)로 처리하고,
+	#  브라켓/슬롯 인덱스는 나눗셈/나머지로 직접 계산한다)
 	delete {mobdef::normal::allids::*}
-	set {_id} = 0
-	loop 20 times:
-		set {_bracket} = loop-number - 1
-		loop 5 times:
-			set {_slot} = loop-number - 1
-			add 1 to {_id}
-			set {_cyclepos} = {_bracket} mod 4
-			set {_prefix} = {bracketdata::prefix::%{_bracket}%}
-			set {_suffix} = {mobslot::suffix::%{_slot}%}
-			set {mobdef::normal::%{_id}%::name} to "%{_prefix}% %{_suffix}%"
-			set {mobdef::normal::%{_id}%::base} to {mobslot::base::%{_slot}%}
-			set {mobdef::normal::%{_id}%::region} to {bracketdata::region::%{_bracket}%}
-			set {mobdef::normal::%{_id}%::level} to {bracketdata::level::%{_bracket}%}
-			set {mobdef::normal::%{_id}%::hp} to {bracketdata::hp::%{_bracket}%}
-			set {mobdef::normal::%{_id}%::dmg} to {bracketdata::dmg::%{_bracket}%}
-			set {mobdef::normal::%{_id}%::trait} to {traitcycle::%{_slot}%::%{_cyclepos}%}
-			set {mobdef::normal::%{_id}%::dropitem} to {bracketdata::dropitem::%{_bracket}%}
-			set {mobdef::normal::%{_id}%::dropchance} to {mobslot::dropbonus::%{_slot}%}
-			set {mobdef::normal::%{_id}%::goldmin} to {bracketdata::goldmin::%{_bracket}%}
-			set {mobdef::normal::%{_id}%::goldmax} to {bracketdata::goldmax::%{_bracket}%}
-			add {_id} to {mobdef::normal::allids::*}
-			set {_regionlist::*} = {bracketdata::region::%{_bracket}%} split at ","
-			loop {_regionlist::*}:
-				add {_id} to {mobdef::normal::index::%loop-value%::%{mobslot::base::%{_slot}%}%::*}
+	loop 100 times:
+		set {_id} to loop-number
+		set {_zero} to loop-number - 1
+		set {_bracket} to floor({_zero} / 5)
+		set {_slot} to {_zero} mod 5
+		set {_cyclepos} to {_bracket} mod 4
+		set {_prefix} to {bracketdata::prefix::%{_bracket}%}
+		set {_suffix} to {mobslot::suffix::%{_slot}%}
+		set {mobdef::normal::%{_id}%::name} to "%{_prefix}% %{_suffix}%"
+		set {mobdef::normal::%{_id}%::base} to {mobslot::base::%{_slot}%}
+		set {mobdef::normal::%{_id}%::region} to {bracketdata::region::%{_bracket}%}
+		set {mobdef::normal::%{_id}%::level} to {bracketdata::level::%{_bracket}%}
+		set {mobdef::normal::%{_id}%::hp} to {bracketdata::hp::%{_bracket}%}
+		set {mobdef::normal::%{_id}%::dmg} to {bracketdata::dmg::%{_bracket}%}
+		set {mobdef::normal::%{_id}%::trait} to {traitcycle::%{_slot}%::%{_cyclepos}%}
+		set {mobdef::normal::%{_id}%::dropitem} to {bracketdata::dropitem::%{_bracket}%}
+		set {mobdef::normal::%{_id}%::dropchance} to {mobslot::dropbonus::%{_slot}%}
+		set {mobdef::normal::%{_id}%::goldmin} to {bracketdata::goldmin::%{_bracket}%}
+		set {mobdef::normal::%{_id}%::goldmax} to {bracketdata::goldmax::%{_bracket}%}
+		add {_id} to {mobdef::normal::allids::*}
+		add {_id} to {mobdef::normal::index::%{bracketdata::region::%{_bracket}%}%::%{mobslot::base::%{_slot}%}%::*}
+
+	# 브라켓0(썩어가는, id 1~5)은 "평야/숲" 공용 스폰이므로 평야 인덱스에도 추가 등록한다.
+	loop 5 times:
+		set {_bid} to loop-number
+		set {_bslot} to loop-number - 1
+		add {_bid} to {mobdef::normal::index::PLAINS::%{mobslot::base::%{_bslot}%}%::*}
 
 	# ---- 브라켓별 경험치 표 (일반/정예/근위/엘리트 공통 인덱스 0~19) ----
-	set {expdata::normal::0} to 94   ; set {expdata::normal::1} to 303  ; set {expdata::normal::2} to 596  ; set {expdata::normal::3} to 940
-	set {expdata::normal::4} to 1319 ; set {expdata::normal::5} to 1722 ; set {expdata::normal::6} to 2357 ; set {expdata::normal::7} to 3092
-	set {expdata::normal::8} to 3927 ; set {expdata::normal::9} to 4862 ; set {expdata::normal::10} to 5897; set {expdata::normal::11} to 7032
-	set {expdata::normal::12} to 8267; set {expdata::normal::13} to 9602; set {expdata::normal::14} to 11037; set {expdata::normal::15} to 12572
-	set {expdata::normal::16} to 14207; set {expdata::normal::17} to 15942; set {expdata::normal::18} to 25000; set {expdata::normal::19} to 30000
+	set {expdata::normal::0} to 94
+	set {expdata::normal::1} to 303
+	set {expdata::normal::2} to 596
+	set {expdata::normal::3} to 940
+	set {expdata::normal::4} to 1319
+	set {expdata::normal::5} to 1722
+	set {expdata::normal::6} to 2357
+	set {expdata::normal::7} to 3092
+	set {expdata::normal::8} to 3927
+	set {expdata::normal::9} to 4862
+	set {expdata::normal::10} to 5897
+	set {expdata::normal::11} to 7032
+	set {expdata::normal::12} to 8267
+	set {expdata::normal::13} to 9602
+	set {expdata::normal::14} to 11037
+	set {expdata::normal::15} to 12572
+	set {expdata::normal::16} to 14207
+	set {expdata::normal::17} to 15942
+	set {expdata::normal::18} to 25000
+	set {expdata::normal::19} to 30000
 
-	set {expdata::elite::0} to 141   ; set {expdata::elite::1} to 455  ; set {expdata::elite::2} to 894  ; set {expdata::elite::3} to 1410
-	set {expdata::elite::4} to 1979  ; set {expdata::elite::5} to 2583 ; set {expdata::elite::6} to 3536 ; set {expdata::elite::7} to 4638
-	set {expdata::elite::8} to 5891  ; set {expdata::elite::9} to 7293 ; set {expdata::elite::10} to 8846; set {expdata::elite::11} to 10548
-	set {expdata::elite::12} to 12401; set {expdata::elite::13} to 14403; set {expdata::elite::14} to 16556; set {expdata::elite::15} to 18858
-	set {expdata::elite::16} to 21311; set {expdata::elite::17} to 23913; set {expdata::elite::18} to 37500; set {expdata::elite::19} to 45000
+	set {expdata::elite::0} to 141
+	set {expdata::elite::1} to 455
+	set {expdata::elite::2} to 894
+	set {expdata::elite::3} to 1410
+	set {expdata::elite::4} to 1979
+	set {expdata::elite::5} to 2583
+	set {expdata::elite::6} to 3536
+	set {expdata::elite::7} to 4638
+	set {expdata::elite::8} to 5891
+	set {expdata::elite::9} to 7293
+	set {expdata::elite::10} to 8846
+	set {expdata::elite::11} to 10548
+	set {expdata::elite::12} to 12401
+	set {expdata::elite::13} to 14403
+	set {expdata::elite::14} to 16556
+	set {expdata::elite::15} to 18858
+	set {expdata::elite::16} to 21311
+	set {expdata::elite::17} to 23913
+	set {expdata::elite::18} to 37500
+	set {expdata::elite::19} to 45000
 
-	set {expdata::guard::0} to 188   ; set {expdata::guard::1} to 606  ; set {expdata::guard::2} to 1192 ; set {expdata::guard::3} to 1880
-	set {expdata::guard::4} to 2638  ; set {expdata::guard::5} to 3444 ; set {expdata::guard::6} to 4714 ; set {expdata::guard::7} to 6184
-	set {expdata::guard::8} to 7854  ; set {expdata::guard::9} to 9724 ; set {expdata::guard::10} to 11794; set {expdata::guard::11} to 14064
-	set {expdata::guard::12} to 16534; set {expdata::guard::13} to 19204; set {expdata::guard::14} to 22074; set {expdata::guard::15} to 25144
-	set {expdata::guard::16} to 28414; set {expdata::guard::17} to 31884; set {expdata::guard::18} to 50000; set {expdata::guard::19} to 60000
+	set {expdata::guard::0} to 188
+	set {expdata::guard::1} to 606
+	set {expdata::guard::2} to 1192
+	set {expdata::guard::3} to 1880
+	set {expdata::guard::4} to 2638
+	set {expdata::guard::5} to 3444
+	set {expdata::guard::6} to 4714
+	set {expdata::guard::7} to 6184
+	set {expdata::guard::8} to 7854
+	set {expdata::guard::9} to 9724
+	set {expdata::guard::10} to 11794
+	set {expdata::guard::11} to 14064
+	set {expdata::guard::12} to 16534
+	set {expdata::guard::13} to 19204
+	set {expdata::guard::14} to 22074
+	set {expdata::guard::15} to 25144
+	set {expdata::guard::16} to 28414
+	set {expdata::guard::17} to 31884
+	set {expdata::guard::18} to 50000
+	set {expdata::guard::19} to 60000
 
-	set {expdata::boss::0} to 282    ; set {expdata::boss::1} to 909   ; set {expdata::boss::2} to 1788  ; set {expdata::boss::3} to 2820
-	set {expdata::boss::4} to 3957   ; set {expdata::boss::5} to 5166  ; set {expdata::boss::6} to 7071  ; set {expdata::boss::7} to 9276
-	set {expdata::boss::8} to 11781  ; set {expdata::boss::9} to 14586 ; set {expdata::boss::10} to 17691; set {expdata::boss::11} to 21096
-	set {expdata::boss::12} to 24801 ; set {expdata::boss::13} to 28806; set {expdata::boss::14} to 33111; set {expdata::boss::15} to 37716
-	set {expdata::boss::16} to 42621 ; set {expdata::boss::17} to 47826; set {expdata::boss::18} to 75000; set {expdata::boss::19} to 90000
+	set {expdata::boss::0} to 282
+	set {expdata::boss::1} to 909
+	set {expdata::boss::2} to 1788
+	set {expdata::boss::3} to 2820
+	set {expdata::boss::4} to 3957
+	set {expdata::boss::5} to 5166
+	set {expdata::boss::6} to 7071
+	set {expdata::boss::7} to 9276
+	set {expdata::boss::8} to 11781
+	set {expdata::boss::9} to 14586
+	set {expdata::boss::10} to 17691
+	set {expdata::boss::11} to 21096
+	set {expdata::boss::12} to 24801
+	set {expdata::boss::13} to 28806
+	set {expdata::boss::14} to 33111
+	set {expdata::boss::15} to 37716
+	set {expdata::boss::16} to 42621
+	set {expdata::boss::17} to 47826
+	set {expdata::boss::18} to 75000
+	set {expdata::boss::19} to 90000
 
 	broadcast "<gray>[시스템] 일반 몬스터 100종 데이터 생성 완료" to console
 
 function expBracketOf(level: number) :: number:
-	set {_b} = floor((({_level} - 1) / 5))
+	set {_b} to floor((({_level} - 1) / 5))
 	if {_b} > 19:
-		set {_b} = 19
+		set {_b} to 19
 	if {_b} < 0:
-		set {_b} = 0
+		set {_b} to 0
 	return {_b}
 
 function getNormalExp(level: number) :: number:
@@ -154,9 +240,9 @@ function normalizeBaseType(base: text) :: text:
 	return {_base}
 
 on spawn of zombie, skeleton, spider, cave spider, creeper, enderman, zombie villager, blaze, piglin:
-	set {_region} = getRegionTag(location of event-entity)
-	set {_base} = normalizeBaseType("%type of event-entity%")
-	set {_r} = random number between 0.0 and 100.0
+	set {_region} to getRegionTag(location of event-entity)
+	set {_base} to normalizeBaseType("%type of event-entity%")
+	set {_r} to random number between 0.0 and 100.0
 
 	if {_r} <= 0.3:
 		if trySpawnBoss(event-entity, {_region}, {_base}) is true:
@@ -171,23 +257,23 @@ on spawn of zombie, skeleton, spider, cave spider, creeper, enderman, zombie vil
 		spawnNormalVariant(event-entity, {_region}, {_base})
 
 function pickNormalId(region: text, base: text) :: number:
-	set {_ids} = {mobdef::normal::index::%{_region}%::%{_base}%::*}
+	set {_ids} to {mobdef::normal::index::%{_region}%::%{_base}%::*}
 	if {_ids} is not set:
 		return -1
 	return a random element out of {_ids}
 
 function spawnNormalVariant(e: entity, region: text, base: text):
-	set {_id} = pickNormalId({_region}, {_base})
+	set {_id} to pickNormalId({_region}, {_base})
 	if {_id} = -1:
 		stop
 	applyNormalStatsToEntity({_e}, {_id})
 	tagMobInstance({_e}, "NORMAL", {_id})
 
 function applyNormalStatsToEntity(e: entity, id: number):
-	set {_hp} = {mobdef::normal::%{_id}%::hp}
-	set {_dmg} = {mobdef::normal::%{_id}%::dmg}
-	set {_lvl} = {mobdef::normal::%{_id}%::level}
-	set {_name} = {mobdef::normal::%{_id}%::name}
+	set {_hp} to {mobdef::normal::%{_id}%::hp}
+	set {_dmg} to {mobdef::normal::%{_id}%::dmg}
+	set {_lvl} to {mobdef::normal::%{_id}%::level}
+	set {_name} to {mobdef::normal::%{_id}%::name}
 	set the max health of {_e} to {_hp}
 	heal {_e} by {_hp}
 	set the attack damage of {_e} to {_dmg}
@@ -196,7 +282,7 @@ function applyNormalStatsToEntity(e: entity, id: number):
 	# 별도 애드온(NoAI/Persistent 태그)이 필요할 수 있음 — 순수 Skript 만으로는 despawn 제어에 한계가 있음
 
 function tagMobInstance(e: entity, tier: text, defid: number):
-	set {_uuid} = "%uuid of {_e}%"
+	set {_uuid} to "%uuid of {_e}%"
 	set {mobinstance::%{_uuid}%::tier} to {_tier}
 	if {_tier} is "NORMAL":
 		set {mobinstance::%{_uuid}%::defid} to {_defid}
@@ -213,9 +299,9 @@ function tagMobInstance(e: entity, tier: text, defid: number):
 ########################################################################
 on damage:
 	if victim is a monster:
-		set {_uuid} = "%uuid of victim%"
+		set {_uuid} to "%uuid of victim%"
 		if {mobinstance::%{_uuid}%::tier} is set:
-			set {_trait} = {mobinstance::%{_uuid}%::trait}
+			set {_trait} to {mobinstance::%{_uuid}%::trait}
 			if {_trait} is "reflect20":
 				if attacker is set:
 					if random number between 0.0 and 1.0 <= 0.2:
@@ -228,9 +314,9 @@ on damage:
 					apply potion effect of speed of tier 2 to victim for 60 ticks
 
 	if attacker is a monster:
-		set {_uuid} = "%uuid of attacker%"
+		set {_uuid} to "%uuid of attacker%"
 		if {mobinstance::%{_uuid}%::tier} is set:
-			set {_trait} = {mobinstance::%{_uuid}%::trait}
+			set {_trait} to {mobinstance::%{_uuid}%::trait}
 			if {_trait} is "poison10":
 				if random number between 0.0 and 1.0 <= 0.1:
 					apply potion effect of poison to victim for 60 ticks
@@ -247,7 +333,7 @@ on damage:
 			else if {_trait} is "knockback50":
 				push victim in horizontal direction of attacker with speed 1.5
 			else if {_trait} is "packbonus10":
-				set {_dmg} = damage * 1.1
+				set {_dmg} to damage * 1.1
 				set damage to {_dmg}
 			else if {_trait} is "bleed25_3s":
 				if random number between 0.0 and 1.0 <= 0.25:
@@ -262,7 +348,7 @@ on damage:
 				apply potion effect of weakness of tier 1 to victim for 60 ticks
 			else if {_trait} is "nightatk15":
 				if time of world of attacker > 13000 and time of world of attacker < 23000:
-					set {_dmg} = damage * 1.15
+					set {_dmg} to damage * 1.15
 					set damage to {_dmg}
 			else if {_trait} is "silence15_2s":
 				if victim is a player:
@@ -272,11 +358,11 @@ on damage:
 						set {stats::%victim%::silenced} to false
 			else if {_trait} is "lowhp50atk20":
 				if health of attacker <= (max health of attacker * 0.5):
-					set {_dmg} = damage * 1.2
+					set {_dmg} to damage * 1.2
 					set damage to {_dmg}
 
 on death of a monster:
-	set {_uuid} = "%uuid of victim%"
+	set {_uuid} to "%uuid of victim%"
 	if {mobinstance::%{_uuid}%::tier} is not set:
 		stop trigger
 	if {mobinstance::%{_uuid}%::trait} is "explodeondeath":
@@ -285,9 +371,9 @@ on death of a monster:
 			if distanceBetween(location of loop-player, location of victim) <= 2:
 				damage loop-player by 10
 
-	set {_tier} = {mobinstance::%{_uuid}%::tier}
-	if attacker of event is a player:
-		set {_p} = attacker of event
+	set {_tier} to {mobinstance::%{_uuid}%::tier}
+	if attacker is a player:
+		set {_p} to attacker
 		if {_tier} is "NORMAL":
 			handleMonsterKillReward({_p}, {mobinstance::%{_uuid}%::level}, getNormalExp({mobinstance::%{_uuid}%::level}), {mobinstance::%{_uuid}%::goldmin}, {mobinstance::%{_uuid}%::goldmax}, {mobinstance::%{_uuid}%::dropitem}, {mobinstance::%{_uuid}%::dropchance})
 			add 1 to {stats::%{_p}%::kills::normal}
@@ -306,7 +392,7 @@ on death of a monster:
 ########################################################################
 function handleMonsterKillReward(p: player, level: number, exp: number, goldmin: number, goldmax: number, dropitem: text, dropchance: number):
 	addExp({_p}, {_exp})
-	set {_gold} = random integer between {_goldmin} and {_goldmax}
+	set {_gold} to random integer between {_goldmin} and {_goldmax}
 	addGold({_p}, {_gold})
 	if random number between 0.0 and 1.0 <= ({_dropchance} / 100):
 		give {_p} a paper named "<yellow>%{_dropitem}%" with lore "<gray>몬스터 드롭 재료"

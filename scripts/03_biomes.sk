@@ -46,7 +46,7 @@ on script load:
 
 # 실제 바이옴을 문서상의 13개 지역 태그로 매핑 (지하 30 이하는 동굴로 취급)
 function getRegionTag(loc: location) :: text:
-	set {_biome} = biome at {_loc}
+	set {_biome} to biome at {_loc}
 	if world of {_loc} is "world_nether":
 		return "NETHER_BORDER"
 	if world of {_loc} is "world_the_end":
@@ -78,11 +78,11 @@ function getRegionTag(loc: location) :: text:
 # 1초마다 이동중인 플레이어의 지역 변화를 감지해 권장 레벨 안내
 every 1 second:
 	loop all players:
-		set {_region} = getRegionTag(location of loop-player)
+		set {_region} to getRegionTag(location of loop-player)
 		if {_region} is not {stats::%loop-player%::lastbiome}:
 			set {stats::%loop-player%::lastbiome} to {_region}
-			set {_min} = {biomedata::minlevel::%{_region}%}
-			set {_name} = {biomedata::regionname::%{_region}%}
+			set {_min} to {biomedata::minlevel::%{_region}%}
+			set {_name} to {biomedata::regionname::%{_region}%}
 			send action bar "<green>[%{_name}%]<reset> <gray>권장 레벨: <yellow>%{_min}%Lv 이상" to loop-player
 			if {stats::%loop-player%::visitedbiome::%{_region}%} is not true:
 				set {stats::%loop-player%::visitedbiome::%{_region}%} to true
@@ -98,8 +98,8 @@ every 1 second:
 				grantTitle(loop-player, "늪지의 생존자")
 
 function checkExplorerTitle(p: player):
-	set {_all} = 13
-	set {_count} = 0
+	set {_all} to 13
+	set {_count} to 0
 	loop {biomedata::regionname::*}:
 		if {stats::%{_p}%::visitedbiome::%loop-index%} is true:
 			add 1 to {_count}
